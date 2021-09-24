@@ -1,0 +1,5 @@
+﻿virtualServerName
+keyPairName
+
+
+/nsconfig/ssl/

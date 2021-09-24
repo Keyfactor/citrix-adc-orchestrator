@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.Logging;
 using Keyfactor.Orchestrators.Common.Enums;
@@ -14,14 +13,25 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         private ILogger _logger { get; }
         public string ExtensionName => CitrixAdcStore.storeType;
 
+        public Management(ILogger<Management> logger)
+        {
+            _logger = logger;
+        }
+
         private void performAdd(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName, string virtualServerName, bool overwrite)
         {
             _logger.LogTrace($"Enter performAdd");
             (var pemFile, var privateKeyFile) = store.uploadCertificate(cert.Contents, cert.PrivateKeyPassword, cert.Alias, overwrite);
 
+            //_logger.LogDebug($"Testing for keyPairName");
+            //var test = store.findKeyPairByCertPath("/nsconfig/ssl//" + cert.Alias);
+            //if (test != null) _logger.LogDebug("Found KeyPair:" + test);
+
+            _logger.LogDebug($"Updating keyPair");
             //update keypair
             keyPairName = store.updateKeyPair(cert.Alias, keyPairName, pemFile, privateKeyFile);
 
+            _logger.LogDebug($"Updating cert bindings");
             //update cert bindings
             store.updateBindings(keyPairName, virtualServerName);
         }
@@ -34,12 +44,16 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         public JobResult ProcessJob(ManagementJobConfiguration jobConfiguration)
         {
             CitrixAdcStore store = new CitrixAdcStore(jobConfiguration);
-
+            _logger.LogDebug($"Logging into Citrix...");
             store.login();
 
+            _logger.LogDebug($"Entering ProcessJob");
             JobResult result = ProcessJob(store, jobConfiguration);
 
+            _logger.LogDebug($"Logging out of Citrix...");
             store.logout();
+
+            _logger.LogDebug($"Exiting ProcessJob");
 
             return result;
         }

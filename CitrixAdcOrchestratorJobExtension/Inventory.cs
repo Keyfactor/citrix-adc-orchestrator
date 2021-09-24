@@ -3,36 +3,42 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
-using com.citrix.netscaler.nitro.resource.Base;
-using com.citrix.netscaler.nitro.resource.config.system;
-using com.citrix.netscaler.nitro.service;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Security;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Web;
+
+using Keyfactor.Orchestrators.Common.Enums;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
     public class Inventory : IInventoryJobExtension
     {
         private ILogger _logger { get; }
+
         public string ExtensionName => CitrixAdcStore.storeType;
 
+        public Inventory(ILogger<Inventory> logger)
+        {
+            _logger = logger;
+        }
 
         public JobResult ProcessJob(InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
         {
+            _logger.LogDebug($"Client Machine: {jobConfiguration.CertificateStoreDetails.ClientMachine}");
+            _logger.LogDebug($"UseSSL: {jobConfiguration.UseSSL}");
+            _logger.LogDebug($"StorePath: {jobConfiguration.CertificateStoreDetails.StorePath}");
+
+            _logger.LogDebug($"Entering ProcessJob");
             CitrixAdcStore store = new CitrixAdcStore(jobConfiguration);
 
+            _logger.LogDebug($"Logging into Citrix...");
             store.login();
 
             JobResult result = ProcessJob(store, jobConfiguration, submitInventoryUpdate);
 
+            _logger.LogDebug($"Logging out of Citrix...");
             store.logout();
+
+            _logger.LogDebug($"Exiting ProcessJob");
 
             return result;
         }
@@ -45,117 +51,114 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             try
             {
-                // 2) Custom logic to retrieve certificates from certificate store.
+                _logger.LogDebug($"Getting file list...");
+                var files = store.listFiles();
 
-                // Retrieve fileNAMEs from directory
-                options o = new options();
-                String urlPath = HttpUtility.UrlEncode(config.Store.StorePath);
-                o.set_args($"filelocation:{urlPath}");
-                systemfile[] files = systemfile.get(nss, o);
-                Logger.Trace($"Found {files?.Count() ?? 0} files at {config.Store.StorePath}");
-
-                Dictionary<string, string> extant = config.Store.Inventory.ToDictionary(i => i.Alias, i => i.Thumbprints[0]);
+                Dictionary<string, string> existing = jobConfiguration.LastInventory.ToDictionary(i => i.Alias, i => i.Thumbprints.First());
                 HashSet<string> processedAliases = new HashSet<string>();
 
-                // NetScaler API sometimes returns incomplete contents, so we want to make sure the previous inventory items 
-                // are still checked in that case.
-                List<String> contentsToCheck = files?.Select(x => x.filename)?.Union(extant.Keys)?.ToList() ?? new List<string>();
+                //union the remote keys + last inventory
+                List<String> contentsToCheck = files?.Select(x => x.filename)?.Union(existing.Keys)?.ToList() ?? new List<string>();
 
-                // Get file contents 1-by-1
+                _logger.LogDebug($"Getting KeyPair list...");
+                var keyPairList = store.listKeyPairs();
+                _logger.LogDebug($"Found {keyPairList.Length} KeyPair results...");
+
+                //create a lookup by cert(alias) for certkey identifier
+                Dictionary<string, string> keyPairMap = keyPairList.ToDictionary(i => i.cert, i => i.certkey);
+
+                _logger.LogDebug($"For each file get contents by alias...");
                 foreach (string s in contentsToCheck)
                 {
-                    bool privateKeyEntry = false;
-                    X509Certificate2 x = getX509Certificate(nss, s, o, out privateKeyEntry);
+                    _logger.LogDebug($"Checking alias (filename): {s}");
+                    X509Certificate2 x = store.getX509Certificate(s, out bool privateKeyEntry);
 
                     if (x == null) continue;
 
-                    // Record inventory
-                    AgentInventoryItemStatus aiis = extant.ContainsKey(s)
-                                                    ? extant[s].Equals(x.Thumbprint, StringComparison.OrdinalIgnoreCase)
-                                                        ? AgentInventoryItemStatus.Unchanged
-                                                        : AgentInventoryItemStatus.Modified
-                                                    : AgentInventoryItemStatus.New;
                     processedAliases.Add(s);
-                    inventoryItems.Add(new AgentCertStoreInventoryItem()
+
+                    Dictionary<string,object> parameters = new Dictionary<string, object>();
+
+                    if (keyPairMap.ContainsKey(s))
+                    {
+                       
+                        string keyPairName = keyPairMap[s];
+                        _logger.LogDebug($"Found keyPairName: {keyPairName}");
+                        parameters.Add("keyPairName", keyPairName);
+
+                        var binding = store.getBinding(keyPairName);
+
+                        if (binding != null)
+                        {
+                            var vserver_bindings = binding.sslcertkey_sslvserver_binding;
+                            if (vserver_bindings != null) { 
+                                var virtualServerName = String.Join(",", vserver_bindings.Select(p=>p.vservername));
+                                _logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
+                                parameters.Add("virtualServerName", virtualServerName);
+                            }
+                            //TODO: Other binding methods
+                            //binding.sslcertkey_service_binding
+                            //binding.sslcertkey_crldistribution_binding
+                            //binding.sslcertkey_sslocspresponder_binding
+                        }
+                    }
+
+                    inventory.Add(new CurrentInventoryItem()
                     {
                         Alias = s,
                         Certificates = new string[] { Convert.ToBase64String(x.GetRawCertData()) },
-                        ItemStatus = aiis,
+                        //ItemStatus = itemStatus,
                         PrivateKeyEntry = privateKeyEntry,
-                        UseChainLevel = false
+                        UseChainLevel = false,
+                        Parameters = parameters
                     });
                 }
-                Logger.Debug($"Found {inventoryItems.Count()} certificates at {config.Store.StorePath}");
-                try
-                {
-                    resp = nss.logout();
-                }
-                catch
-                {
-                    Logger.Debug("Failed logout of " + GetStoreType() + " device");
-                }
-                // Identify previously inventoried certs that are now absent from directory
-                foreach (string s in extant.Keys.Except(processedAliases))
-                {
-                    inventoryItems.Add(new AgentCertStoreInventoryItem()
-                    {
-                        Alias = s,
-                        ItemStatus = AgentInventoryItemStatus.Deleted
-                    });
-                }
+                _logger.LogDebug($"Found {inventory.Count()} certificates at {jobConfiguration.CertificateStoreDetails.StorePath}");
 
-
-                // 3) Add certificates (no private keys) to the collection below.  If multiple certs in a store comprise a chain, the Certificates array will house multiple certs per InventoryItem.  If multiple certs
-                //     in a store comprise separate unrelated certs, there will be one InventoryItem object created per certificate.
-
-                //inventoryItems.Add(new AgentCertStoreInventoryItem()
-                //{
-                //    ItemStatus = AgentInventoryItemStatus.Unknown, //There are other statuses, but I always use this and let KF command figure out the actual status
-                //    Alias = {valueRepresentingChainIdentifier}
-                //    PrivateKeyEntry = true|false //You will not pass the private key back, but you can identify if the main certificate of the chain contains a private key
-                //    UseChainLevel = true|false,  //true if Certificates will contain > 1 certificate, main cert => intermediate CA cert => root CA cert.  false if Certificates will contain an array of 1 certificate
-                //    Certificates = //Array of single X509 certificates in Base64 string format (certificates if chain, single cert if not), something like:
-                //    ****************************
-                //          foreach(X509Certificate2 certificate in certificates)
-                //              certList.Add(Convert.ToBase64String(certificate.Export(X509ContentType.Cert)));
-                //              certList.ToArray();
-                //    ****************************
-                //});
 
             }
             catch (Exception ex)
             {
-                Logger.Error("Error performing certificate inventory: " + ex.Message);
-                Logger.Debug(ex.StackTrace);
+                _logger.LogError("Error performing certificate inventory: " + ex.Message);
+                _logger.LogDebug(ex.StackTrace);
+
                 //Status: 2=Success, 3=Warning, 4=Error
-                return new AnyJobCompleteInfo() { Status = 4, Message = ex.StackTrace };
+                return new JobResult()
+                {
+                    Result = Keyfactor.Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Failure,
+                    JobHistoryId = jobConfiguration.JobHistoryId,
+                    FailureMessage = "Error while performing certificate inventory"
+                };
             }
 
             try
             {
+                _logger.LogDebug($"Sending results back to command");
                 //Sends inventoried certificates back to KF Command
-                submitInventory.Invoke(inventoryItems);
+                submitInventoryUpdate.Invoke(inventory);
+
+                _logger.LogDebug($"Successfully Completed Job");
                 //Status: 2=Success, 3=Warning, 4=Error
-                return new AnyJobCompleteInfo() { Status = 2, Message = "Successful" };
+                return new JobResult()
+                {
+                    Result = Keyfactor.Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Success,
+                    JobHistoryId = jobConfiguration.JobHistoryId,
+                    FailureMessage = ""
+                };
             }
             catch (Exception ex)
             {
-                Logger.Error("Error submitting certificate inventory: " + ex.Message);
-                Logger.Debug(ex.StackTrace);
+                _logger.LogError("Error submitting certificate inventory: " + ex.Message);
+                _logger.LogDebug(ex.StackTrace);
                 // NOTE: if the cause of the submitInventory.Invoke exception is a communication issue between the Orchestrator server and the Command server, the job status returned here
                 //  may not be reflected in Keyfactor Command.
-                return new AnyJobCompleteInfo() { Status = 4, Message = "Custom message you want to show to show up as the error message in Job History in KF Command" };
+                return new JobResult()
+                {
+                    Result = Keyfactor.Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Failure,
+                    JobHistoryId = jobConfiguration.JobHistoryId,
+                    FailureMessage = "Failure while submitting certificate inventory"
+                };
             }
-
-
-            submitInventoryUpdate.Invoke(inventory);
-
-            return new JobResult()
-            {
-                Result = Keyfactor.Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Success,
-                JobHistoryId = jobConfiguration.JobHistoryId,
-                FailureMessage = ""
-            };
         }
     }
 }
