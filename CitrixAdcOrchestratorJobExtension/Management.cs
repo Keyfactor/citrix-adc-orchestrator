@@ -21,15 +21,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         private void performAdd(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName, string virtualServerName, bool overwrite)
         {
             _logger.LogTrace($"Enter performAdd");
-            (var pemFile, var privateKeyFile) = store.uploadCertificate(cert.Contents, cert.PrivateKeyPassword, cert.Alias, overwrite);
 
-            //_logger.LogDebug($"Testing for keyPairName");
-            //var test = store.findKeyPairByCertPath("/nsconfig/ssl//" + cert.Alias);
-            //if (test != null) _logger.LogDebug("Found KeyPair:" + test);
+            var alias = Guid.NewGuid().ToString();
+            (var pemFile, var privateKeyFile) = store.uploadCertificate(cert.Contents, cert.PrivateKeyPassword, alias, overwrite);
 
             _logger.LogDebug($"Updating keyPair");
             //update keypair
-            keyPairName = store.updateKeyPair(cert.Alias, keyPairName, pemFile, privateKeyFile);
+            keyPairName = store.updateKeyPair(alias, keyPairName, pemFile, privateKeyFile);
 
             _logger.LogDebug($"Updating cert bindings");
             //update cert bindings
@@ -70,6 +68,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     case CertStoreOperationType.Add:
                         string virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
                         string keyPairName = (string)jobConfiguration.JobProperties["keyPairName"]; 
+                        //var keyPairName = Guid.NewGuid().ToString();
                         performAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName, jobConfiguration.Overwrite);
                         break;
                     case CertStoreOperationType.Remove:

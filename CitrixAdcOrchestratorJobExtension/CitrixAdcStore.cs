@@ -11,7 +11,7 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Crypto.Parameters;
-
+using Org.BouncyCastle.Security;
 using System.Linq;
 
 using com.citrix.netscaler.nitro.exception;
@@ -36,7 +36,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         private readonly string username;
         private readonly string password;
         private readonly uint timeout = 3600;
-        private readonly string storePath;
+        public readonly string storePath;
 
         private nitro_service nss;
 
@@ -308,8 +308,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public string updateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey)
         {
-            //_logger.LogTrace($"Enter updateKeyPair");
-            //Dictionary<string, string> jobProperties = JsonConvert.DeserializeObject<Dictionary<string, string>>((string)config.Job.Properties);
 
             string certPath = this.storePath + "/" + alias;
 
@@ -473,7 +471,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     // check .key file
                     try
                     {
-                        systemfile keyFile = getSystemFile(fileLocation);
+                        systemfile keyFile = getSystemFile(fileLocation + ".key");
                         keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
                     }
                     catch (Exception e)
@@ -572,9 +570,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 AsymmetricCipherKeyPair keypair = (AsymmetricCipherKeyPair)new PemReader(new StringReader(keyString)).ReadObject();
                 RsaPrivateCrtKeyParameters privateKey = (RsaPrivateCrtKeyParameters)keypair.Private;
 
-                RsaKeyParameters publicKey = (RsaKeyParameters)new PemReader(new StringReader(cert.GetPublicKeyString())).ReadObject();
+                //RsaKeyParameters publicKey = (RsaKeyParameters)new PemReader(new StringReader(cert.GetPublicKeyString() ?? string.Empty)).ReadObject();
 
-                //RsaKeyParameters publicKey = (RsaKeyParameters)DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
+                RsaKeyParameters publicKey = (RsaKeyParameters)DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
                 return (privateKey.Modulus.Equals(publicKey.Modulus) && publicKey.Exponent.Equals(privateKey.PublicExponent));
             }
             catch (Exception e)

@@ -79,10 +79,22 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                     Dictionary<string,object> parameters = new Dictionary<string, object>();
 
-                    if (keyPairMap.ContainsKey(s))
+                    var containsKeyWithPath = keyPairMap.ContainsKey(store.storePath + "/" + s);
+                    var containsKey = keyPairMap.ContainsKey(s);
+
+                    if (containsKey || containsKeyWithPath)
                     {
-                       
-                        string keyPairName = keyPairMap[s];
+
+                        string keyPairName = String.Empty;
+                        if(containsKeyWithPath)
+                        {
+                            keyPairName= keyPairMap[store.storePath + "/" + s];
+                        }
+                        else
+                        {
+                            keyPairName = keyPairMap[s];
+                        }
+
                         _logger.LogDebug($"Found keyPairName: {keyPairName}");
                         parameters.Add("keyPairName", keyPairName);
 
@@ -92,7 +104,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         {
                             var vserver_bindings = binding.sslcertkey_sslvserver_binding;
                             if (vserver_bindings != null) { 
-                                var virtualServerName = String.Join(",", vserver_bindings.Select(p=>p.vservername));
+                                var virtualServerName = String.Join(",", vserver_bindings.Select(p=>p.servername));
                                 _logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
                                 parameters.Add("virtualServerName", virtualServerName);
                             }
@@ -102,6 +114,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             //binding.sslcertkey_sslocspresponder_binding
                         }
                     }
+
 
                     inventory.Add(new CurrentInventoryItem()
                     {
