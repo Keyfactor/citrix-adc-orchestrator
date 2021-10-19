@@ -1,184 +1,182 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Web;
-
-using Keyfactor.Orchestrators.Extensions;
-using com.citrix.netscaler.nitro.service;
-using com.citrix.netscaler.nitro.resource.Base;
-
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Security;
-using System.Linq;
-
 using com.citrix.netscaler.nitro.exception;
+using com.citrix.netscaler.nitro.resource.Base;
 using com.citrix.netscaler.nitro.resource.config.ssl;
 using com.citrix.netscaler.nitro.resource.config.system;
-
-using System.Security.Cryptography.X509Certificates;
+using com.citrix.netscaler.nitro.service;
 using com.citrix.netscaler.nitro.util;
+using Keyfactor.Orchestrators.Extensions;
+using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.Security;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
-
-
-    class CitrixAdcStore
+    internal class citrixAdcStore
     {
-        public static readonly string storeType = "CitrixAdc";
-        
-        //private ILogger //_logger { get; }
+        private const uint Timeout = 3600;
+        public static readonly string StoreType = "CitrixAdc";
 
-        private readonly string clientMachine;
-        private readonly bool useSsl;
-        private readonly string username;
-        private readonly string password;
-        private readonly uint timeout = 3600;
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        private ILogger logger { get; set; }
+
+        private readonly string _clientMachine;
+
+        private readonly options _nitroServiceOptions;
+        private readonly string _password;
+        private readonly string _username;
+        private readonly bool _useSsl;
+
         public readonly string storePath;
 
-        private nitro_service nss;
+        private nitro_service _nss;
 
-        private readonly options nitro_service_options; 
-
-        public CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration)config)
+        public citrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config)
         {
-            this.clientMachine = config.CertificateStoreDetails.ClientMachine;
-            this.storePath = config.CertificateStoreDetails.StorePath;
+            logger.LogDebug("Begin citrixAdcStore Constructor...");
+            _clientMachine = config.CertificateStoreDetails.ClientMachine;
+            storePath = config.CertificateStoreDetails.StorePath;
 
-            options o = new options();
-            String urlPath = HttpUtility.UrlEncode(this.storePath);
+            var o = new options();
+            var urlPath = HttpUtility.UrlEncode(storePath);
             o.set_args($"filelocation:{urlPath}");
 
-            this.nitro_service_options = o;
+            _nitroServiceOptions = o;
+
+            logger.LogDebug("Exit citrixAdcStore Constructor...");
         }
 
-        public CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration)config)
+        public citrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config)
         {
-            this.clientMachine = config.CertificateStoreDetails.ClientMachine;
-            this.storePath = config.CertificateStoreDetails.StorePath;
+            logger.LogDebug("Begin citrixAdcStore Constructor...");
+            _clientMachine = config.CertificateStoreDetails.ClientMachine;
+            storePath = config.CertificateStoreDetails.StorePath;
 
-            options o = new options();
-            String urlPath = HttpUtility.UrlEncode(this.storePath);
+            var o = new options();
+            var urlPath = HttpUtility.UrlEncode(storePath);
             o.set_args($"filelocation:{urlPath}");
 
-            this.nitro_service_options = o;
+            _nitroServiceOptions = o;
+            logger.LogDebug("Exit citrixAdcStore Constructor...");
         }
 
-        private CitrixAdcStore(JobConfiguration config)
+        private citrixAdcStore(JobConfiguration config)
         {
-            this.useSsl = config.UseSSL;
-            this.username = config.ServerUsername;
-            this.password = config.ServerPassword;
-
+            logger.LogDebug("Begin citrixAdcStore Constructor...");
+            _useSsl = config.UseSSL;
+            _username = config.ServerUsername;
+            _password = config.ServerPassword;
+            logger.LogDebug("Exit citrixAdcStore Constructor...");
 
         }
-        public void login()
+
+        public void Login()
         {
-            if (this.nss == null)
-            {
-                nss = new nitro_service(this.clientMachine, this.useSsl ? "https" : "http");
-                
-                //12.0
-                //nss.set_certvalidation = false;
-                //nss.set_hostnameverification = false;
-            }
+            logger.LogDebug("Entering CitrixAdcStore Login Method...");
+            _nss ??= new nitro_service(_clientMachine, _useSsl ? "https" : "http");
             base_response response = null;
             try
             {
-                response = nss.login(this.username, this.password, this.timeout);
+                response = _nss.login(_username, _password, Timeout);
             }
             catch (Exception ex)
             {
+                logger.LogError($"Error in Login: {ex.Message}");
                 throw new Exception("Error logging in to CitrixAdc Device", ex);
-            } finally
-            {
-                //(baseResponse.errorcode == 0 || baseResponse.errorcode == 1034)
-                if (response!=null && !nss.isLogin())
-                {
-                    throw new Exception(response.message);
-                }
             }
+            finally
+            {
+                if (response != null && !_nss.isLogin()) throw new Exception(response.message);
+            }
+
+            logger.LogDebug("Exiting CitrixAdcStore Login Method...");
         }
 
-        public bool logout()
+        public bool Logout()
         {
             //base_response resp =
-            try {
-                nss.logout();
+            try
+            {
+                _nss.logout();
                 //TODO: process resp
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return false;
             }
 
             return true;
-            
         }
 
-        public sslcertkey_binding getBinding(string certKey)
+        public sslcertkey_binding GetBinding(string certKey)
         {
-            try { 
-                return sslcertkey_binding.get(nss, certKey);
+            try
+            {
+                return sslcertkey_binding.get(_nss, certKey);
             }
-            catch(Exception e)
+            catch (Exception)
             {
                 return null;
             }
         }
 
-        public sslcertkey[] listKeyPairs()
+        public sslcertkey[] ListKeyPairs()
         {
-            return sslcertkey.get(nss);
+            return sslcertkey.get(_nss);
         }
 
-        public systemfile[] listFiles()
+        public systemfile[] ListFiles()
         {
-            return systemfile.get(nss, this.nitro_service_options);
+            return systemfile.get(_nss, _nitroServiceOptions);
         }
 
-        public (systemfile pemFile, systemfile privateKeyFile) uploadCertificate(string contents, string password, string alias, bool overwrite)
+        public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string password,
+            string alias, bool overwrite)
         {
-            (systemfile pemFile, systemfile privateKeyFile) = getPem(contents, password, alias);
+            var (pemFile, privateKeyFile) = GetPem(contents, password, alias);
 
             //upload certificate
-            uploadFile(pemFile, $"{this.storePath}/{alias}", overwrite);
+            UploadFile(pemFile, overwrite);
 
             //upload private key
             if (privateKeyFile != null)
-            {
                 //_logger.LogTrace($"Uploading Private Key");
 
                 //we default overwrite private key as certificate upload has already succeeded and this file needs to be in sync
-                uploadFile(privateKeyFile, $"{this.storePath}/{alias}.key", true);
-            }
+                UploadFile(privateKeyFile, true);
 
             return (pemFile, privateKeyFile);
         }
 
-        private void uploadFile(systemfile f, string location, bool overwrite)
+        private void UploadFile(systemfile f, bool overwrite)
         {
             //_logger.LogTrace($"Enter uploadFile");
-            base_response b;
             try
             {
                 //_logger.LogTrace($"Adding file at {location}");
-                b = systemfile.add(nss, f);
+                var _ = systemfile.add(_nss, f);
             }
             catch (nitro_exception ne)
             {
+                // ReSharper disable once SuspiciousTypeConversion.Global
                 if ((ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists"))
                     && overwrite)
                 {
-                    systemfile fOld = new systemfile()
+                    var fOld = new systemfile
                     {
                         filename = f.filename,
                         filelocation = f.filelocation
                     };
-                    systemfile.delete(nss, fOld);
-                    systemfile.add(nss, f);
+                    systemfile.delete(_nss, fOld);
+                    systemfile.add(_nss, f);
                     //_logger.LogTrace($"Overwrote file at {location}");
                 }
 
@@ -186,59 +184,49 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 //{
                 //    //_logger.LogDebug($"Certificate was already present on file system; attempting to add to virtual server {JobConfigInfo.vserver}");
                 //}
-                else throw;
+                else
+                {
+                    throw;
+                }
             }
         }
 
-        public base_response deleteFile(string contents, string alias)
+        public base_response DeleteFile(string contents, string alias)
         {
-            systemfile f = new systemfile()
+            var f = new systemfile
             {
                 filename = alias,
-                filelocation = this.storePath
+                filelocation = storePath
             };
-            return deleteFile(f);
+            return DeleteFile(f);
         }
 
-        private base_response deleteFile(systemfile f)
+        private base_response DeleteFile(systemfile f)
         {
-            try
-            {
-                //_logger.LogTrace($"Deleting certificate at {f.filelocation}/{f.filename}");
-                return systemfile.delete(this.nss, f);
-            }
-            catch (Exception e)
-            {
-                //_logger.LogError("Error removing file: " + e.Message);
-                //_logger.LogDebug(e.StackTrace);
-                throw;
-            }
+            //_logger.LogTrace($"Deleting certificate at {f.filelocation}/{f.filename}");
+            return systemfile.delete(_nss, f);
         }
 
-        public string findKeyPairByCertPath(string certPath)
+        public string FindKeyPairByCertPath(string certPath)
         {
-            filtervalue[] filters = new filtervalue[1];
+            var filters = new filtervalue[1];
             filters[0] = new filtervalue("cert", certPath);
             //_logger.LogTrace("Checking " + storeType + $" to see if existing certificate-key pair exists with name {keyPairName}");
-            var filtered_results = sslcertkey.get_filtered(nss, filters);
+            var filteredResults = sslcertkey.get_filtered(_nss, filters);
 
-            if (filtered_results != null && filtered_results.Length > 0)
-            {
-                return filtered_results[0].certkey;
-            }
+            if (filteredResults != null && filteredResults.Length > 0) return filteredResults[0].certkey;
 
             return null;
         }
 
-        private string updateKeyPair(string keyPairName, string certPath, string keyPath)
+        private string UpdateKeyPair(string keyPairName, string certPath, string keyPath)
         {
             try
             {
-
-                filtervalue[] filters = new filtervalue[1];
+                var filters = new filtervalue[1];
                 filters[0] = new filtervalue("certKey", keyPairName);
                 //_logger.LogTrace("Checking " + storeType + $" to see if existing certificate-key pair exists with name {keyPairName}");
-                uint count = sslcertkey.count_filtered(nss, filters);
+                var count = sslcertkey.count_filtered(_nss, filters);
 
                 //_logger.LogTrace($"Count of certkey with {keyPairName}: {count}");
 
@@ -246,7 +234,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     //sslcertkey result = sslcertkey.get(nss, keyPairName);
 
-                    sslcertkey result = new sslcertkey() {
+                    var result = new sslcertkey
+                    {
                         certkey = keyPairName,
                         cert = certPath
                     };
@@ -254,19 +243,16 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     keyPath = certPath + ".key";
 
                     //Existing keypair exists
-                    if (keyPath != null)
-                    {
-                        result.key = keyPath;
-                    }
+                    result.key = keyPath;
                     result.inform = "PEM";
                     result.nodomaincheck = true;
 
                     //_logger.LogTrace("Updating " + storeType + $" certificate-key pair with name {keyPairName}");
-                    base_response response = sslcertkey.change(nss, result);
+                    var _ = sslcertkey.change(_nss, result);
                 }
                 else
                 {
-                    sslcertkey s = new sslcertkey
+                    var s = new sslcertkey
                     {
                         certkey = keyPairName,
                         cert = certPath
@@ -275,44 +261,43 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     {
                         s.key = keyPath;
                         s.password = false;
-                        s.passplain = "0";  // Unused, but required, dummy variable
+                        s.passplain = "0"; // Unused, but required, dummy variable
                     }
+
                     //_logger.LogTrace("Adding " + storeType + $" certificate-key pair with name {keyPairName}");
-                    sslcertkey.add(nss, s);
+                    sslcertkey.add(_nss, s);
                 }
             }
             catch (nitro_exception ne)
             {
-                
                 //_logger.LogWarning($"Exception occured while trying to add or update {keyPairName}");
-                if ((((UInt32)ne.HResult).Equals(0x80138500) || ((UInt32)ne.HResult).Equals(0x80131500)) && ne.Message.Contains("Resource already exists"))
+                if ((((uint) ne.HResult).Equals(0x80138500) || ((uint) ne.HResult).Equals(0x80131500)) &&
+                    ne.Message.Contains("Resource already exists"))
                 {
                     if (ne.Message.Contains("certkeyName Contents,"))
                     {
-                        int start = ne.Message.IndexOf("Contents, ") + "Contents, ".Length;
-                        int end = ne.Message.IndexOf(']', start);
+                        var start = ne.Message.IndexOf("Contents, ", StringComparison.Ordinal) + "Contents, ".Length;
+                        var end = ne.Message.IndexOf(']', start);
                         keyPairName = ne.Message.Substring(start, end - start);
                         //_logger.LogWarning("Certificate keypair already existed on " + storeType + " as " + keyPairName);
                     }
-                    else
-                    {
-                        //_logger.LogWarning("Certificate keypair already existed on " + storeType);
-                    }
                 }
-                else throw;
+                else
+                {
+                    throw;
+                }
             }
 
             return keyPairName;
         }
 
-        public string updateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey)
+        public string UpdateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey)
         {
+            var certPath = storePath + "/" + alias;
 
-            string certPath = this.storePath + "/" + alias;
-
-            if (String.IsNullOrWhiteSpace(keyPairName))
+            if (string.IsNullOrWhiteSpace(keyPairName))
             {
-                var existingKeyPair = findKeyPairByCertPath(certPath);
+                var existingKeyPair = FindKeyPairByCertPath(certPath);
                 if (existingKeyPair != null)
                 {
                     keyPairName = existingKeyPair;
@@ -320,95 +305,95 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 else
                 {
                     // If keyPairName is not specified then create one based upon the alias and serial number
-                    X509Certificate2 cert = new X509Certificate2(Convert.FromBase64String(pemFile.filecontent));
-                    keyPairName = (alias.Substring(0, Math.Min(22, alias.Length))
-                                + "-" + new String(cert.SerialNumber.ToString().Reverse().ToArray()));
+                    var cert = new X509Certificate2(Convert.FromBase64String(pemFile.filecontent));
+                    keyPairName = alias.Substring(0, Math.Min(22, alias.Length))
+                                  + "-" + new string(cert.SerialNumber?.Reverse().ToArray() ?? Array.Empty<char>());
                     keyPairName = keyPairName.Substring(0, Math.Min(31, keyPairName.Length));
                 }
             }
 
-            
-            string keyPath = null;
-            if (privateKey != null)
-            {
-                keyPath = this.storePath + "/" + alias + ".key";
-            }
 
-            return updateKeyPair(keyPairName, certPath, keyPath);
+            string keyPath = null;
+            if (privateKey != null) keyPath = storePath + "/" + alias + ".key";
+
+            return UpdateKeyPair(keyPairName, certPath, keyPath);
         }
 
-        public void updateBindings(string keyPairName, string virtualServerName)
+        public void UpdateBindings(string keyPairName, string virtualServerName)
         {
             //_logger.LogTrace($"Enter updateBindings");
 
-            if (!String.IsNullOrWhiteSpace(virtualServerName))
-            {
-                foreach(var vsName in virtualServerName.Split(",")) { 
-
-                //_logger.LogTrace($"Updating bindings for {virtualServerName}");
-                //bind key-pair to vserver
-                sslvserver_sslcertkey_binding ssb = new sslvserver_sslcertkey_binding()
+            if (!string.IsNullOrWhiteSpace(virtualServerName))
+                foreach (var vsName in virtualServerName.Split(","))
                 {
-                    certkeyname = keyPairName,
-                    vservername = vsName
-                };
-                //_logger.LogDebug($"Adding binding {keyPairName} for virtual server {virtualServerName}");
-                //var base_response = 
-                    sslvserver_sslcertkey_binding.add(nss, ssb);
+                    //_logger.LogTrace($"Updating bindings for {virtualServerName}");
+                    //bind key-pair to vserver
+                    var ssb = new sslvserver_sslcertkey_binding
+                    {
+                        certkeyname = keyPairName,
+                        vservername = vsName
+                    };
+                    //_logger.LogDebug($"Adding binding {keyPairName} for virtual server {virtualServerName}");
+                    //var base_response = 
+                    sslvserver_sslcertkey_binding.add(_nss, ssb);
 
                     //todo: check response
                 }
-            }
         }
 
-        private (byte[], byte[]) GetPemFromPFX(byte[] pfxBytes, char[] pfxPassword)
+        private (byte[], byte[]) GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)
         {
-            Pkcs12Store p = new Pkcs12Store(new MemoryStream(pfxBytes), pfxPassword);
+            var p = new Pkcs12Store(new MemoryStream(pfxBytes), pfxPassword);
 
             // Extract private key
-            MemoryStream memoryStream = new MemoryStream();
+            var memoryStream = new MemoryStream();
             TextWriter streamWriter = new StreamWriter(memoryStream);
-            PemWriter pemWriter = new PemWriter(streamWriter);
+            var pemWriter = new PemWriter(streamWriter);
 
-            String alias = (p.Aliases.Cast<String>()).SingleOrDefault(a => p.IsKeyEntry(a));
-            AsymmetricKeyParameter publicKey = p.GetCertificate(alias).Certificate.GetPublicKey();
-            if (p.GetKey(alias) == null) { throw new Exception($"Unable to get the key for alias: {alias}"); }
-            AsymmetricKeyParameter privateKey = p.GetKey(alias).Key;
-            AsymmetricCipherKeyPair keyPair = new AsymmetricCipherKeyPair(publicKey, privateKey);
+            var alias = p.Aliases.Cast<string>().SingleOrDefault(a => p.IsKeyEntry(a));
+            var publicKey = p.GetCertificate(alias).Certificate.GetPublicKey();
+            if (p.GetKey(alias) == null) throw new Exception($"Unable to get the key for alias: {alias}");
+            var privateKey = p.GetKey(alias).Key;
+            var keyPair = new AsymmetricCipherKeyPair(publicKey, privateKey);
 
             pemWriter.WriteObject(keyPair.Private);
             streamWriter.Flush();
-            String privateKeyString = Encoding.ASCII.GetString(memoryStream.GetBuffer()).Trim().Replace("\r", "").Replace("\0", "");
+            var privateKeyString = Encoding.ASCII.GetString(memoryStream.GetBuffer()).Trim().Replace("\r", "")
+                .Replace("\0", "");
             memoryStream.Close();
             streamWriter.Close();
 
             // Extract server certificate
-            String certStart = "-----BEGIN CERTIFICATE-----\n";
-            String certEnd = "\n-----END CERTIFICATE-----";
-            Func<String, String> pemify = null;
-            pemify = ss => ss.Length <= 64 ? ss : ss.Substring(0, 64) + "\n" + pemify(ss.Substring(64));
-            String certPem = certStart + pemify(Convert.ToBase64String(p.GetCertificate(alias).Certificate.GetEncoded())) + certEnd;
+            var certStart = "-----BEGIN CERTIFICATE-----\n";
+            var certEnd = "\n-----END CERTIFICATE-----";
+
+            string Pemify(string ss)
+            {
+                return ss.Length <= 64 ? ss : ss.Substring(0, 64) + "\n" + Pemify(ss.Substring(64));
+            }
+
+            var certPem = certStart + Pemify(Convert.ToBase64String(p.GetCertificate(alias).Certificate.GetEncoded())) +
+                          certEnd;
             return (Encoding.ASCII.GetBytes(certPem), Encoding.ASCII.GetBytes(privateKeyString));
         }
 
-        private (systemfile, systemfile) getPem(string contents, string password, string alias)
+        private (systemfile, systemfile) GetPem(string contents, string password, string alias)
         {
-
-            systemfile pemFile = new systemfile();
+            var pemFile = new systemfile();
             systemfile privateKeyFile = null;
 
-            if (!String.IsNullOrWhiteSpace(password)) // PFX Entry
+            if (!string.IsNullOrWhiteSpace(password)) // PFX Entry
             {
                 // Load PFX
-                byte[] pfxBytes = Convert.FromBase64String(contents);
-                (byte[] certPem, byte[] privateKey) = GetPemFromPFX(pfxBytes, password.ToCharArray());
+                var pfxBytes = Convert.FromBase64String(contents);
+                var (certPem, privateKey) = GetPemFromPfx(pfxBytes, password.ToCharArray());
 
                 // create private key file
                 privateKeyFile = new systemfile
                 {
                     filecontent = Convert.ToBase64String(privateKey),
                     filename = alias + ".key",
-                    filelocation = this.storePath
+                    filelocation = storePath
                 };
 
                 // set pem file from cert in pfx
@@ -418,13 +403,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 pemFile.filecontent = contents;
             }
+
             pemFile.filename = alias;
-            pemFile.filelocation = this.storePath;
+            pemFile.filelocation = storePath;
 
             return (pemFile, privateKeyFile);
         }
 
-        public X509Certificate2 getX509Certificate(string fileLocation, out bool hasKey)
+        public X509Certificate2 GetX509Certificate(string fileLocation, out bool hasKey)
         {
             systemfile f;
 
@@ -433,36 +419,37 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             try
             {
-                f = getSystemFile(fileLocation);
+                f = GetSystemFile(fileLocation);
             }
             catch
             {
                 hasKey = false;
                 return null;
             }
+
             // Determine if it's a cert
             X509Certificate2 x = null;
             try
             {
                 var b = Convert.FromBase64String(f.filecontent);
-                string fileString = System.Text.Encoding.Default.GetString(b);
+                var fileString = Encoding.Default.GetString(b);
 
                 // Check if private key is included with certificate
-                bool containsKey = fileString.IndexOf("-----BEGIN RSA PRIVATE KEY-----") >= 0;
-                bool containsCert = fileString.IndexOf("-----BEGIN CERTIFICATE-----") >= 0;
+                var containsKey = fileString.IndexOf("-----BEGIN RSA PRIVATE KEY-----", StringComparison.Ordinal) >= 0;
+                var containsCert = fileString.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal) >= 0;
 
                 if (containsCert && containsKey)
                 {
                     //_logger.LogDebug($"File contains certificate and key: {fileLocation}");
 
-                    int keyStart = fileString.IndexOf("-----BEGIN RSA PRIVATE KEY-----");
-                    int keyEnd = fileString.IndexOf("-----END RSA PRIVATE KEY-----") + "-----END RSA PRIVATE KEY-----".Length;
+                    var keyStart = fileString.IndexOf("-----BEGIN RSA PRIVATE KEY-----", StringComparison.Ordinal);
+                    var keyEnd = fileString.IndexOf("-----END RSA PRIVATE KEY-----", StringComparison.Ordinal) +
+                                 "-----END RSA PRIVATE KEY-----".Length;
 
                     // check if need to remove new line
 
                     keyString = fileString.Substring(keyStart, keyEnd - keyStart);
                     certString = fileString.Remove(keyStart, keyEnd - keyStart);
-
                 }
                 else if (containsCert)
                 {
@@ -470,13 +457,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     // check .key file
                     try
                     {
-                        systemfile keyFile = getSystemFile(fileLocation + ".key");
+                        var keyFile = GetSystemFile(fileLocation + ".key");
                         keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
                     }
                     catch (Exception e)
                     {
-                        //_logger.LogInformation("Unable to evaluate private key - " + e.Message);
-                        //Logger.Debug(LogHandler.FlattenException(e));
+                        logger.LogInformation("Unable to evaluate private key - " + e.Message);
+                        logger.LogDebug(e.Message);
                     }
                 }
 
@@ -488,60 +475,58 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 try
                 {
-                    x = readX509Certificate(certString);
+                    x = ReadX509Certificate(certString);
                 }
                 catch (Exception e)
                 {
                     // Not a certificate file
-                    //_logger.LogDebug($"Error reading x509Certificate at {fileLocation}");
-                    //_logger.LogDebug(e.Message);
+                    logger.LogDebug($"Error reading x509Certificate at {fileLocation}");
+                    logger.LogDebug(e.Message);
                     hasKey = false;
                     return null;
                 }
 
-                hasKey = evaluatePrivateKey(x, keyString);
-
+                hasKey = EvaluatePrivateKey(x, keyString);
             }
             catch (Exception e)
             {
                 // Not a certificate file
-                //_logger.LogDebug($"{fileLocation} is not a certificate");
-                //_logger.LogDebug(e.Message);
+                logger.LogDebug($"{fileLocation} is not a certificate");
+                logger.LogDebug(e.Message);
                 hasKey = false;
             }
 
             return x;
         }
 
-        private systemfile getSystemFile(string fileName)
+        private systemfile GetSystemFile(string fileName)
         {
-
             //UI uses
             //systemfile?args=fileLocation:/nsconfig/ssl/,filename:ns-root.key
             //f = systemfile.get(nss, fileLocation, this.nitro_service_options); // This requires the CSS, non-stock nitro SDK
             //nitro/v1/config/systemfile/ns-root.key?args=filelocation:%2Fnsconfig%2Fssl
             //systemfile file = systemfile.get(nss, fileLocation + ".key", this.nitro_service_options); // Again, CSS Nitro SDK, not Citrix
 
-            options option = new options();
+            var option = new options();
 
-            String urlPath = HttpUtility.UrlEncode(this.storePath);
+            var urlPath = HttpUtility.UrlEncode(storePath);
             option.set_args($"filelocation:{urlPath},filename:{fileName}");
-            var results = systemfile.get(nss, option);
-            if(results.Length>0)
-            return results[0];
+            var results = systemfile.get(_nss, option);
+            if (results.Length > 0)
+                return results[0];
 
             //_logger.LogDebug($"filelocation:{urlPath},filename:{fileName} not found");
             throw new Exception("file not found");
         }
 
-        private X509Certificate2 readX509Certificate(string certString)
+        private X509Certificate2 ReadX509Certificate(string certString)
         {
             // Determine if it's a cert
             byte[] b = null;
             X509Certificate2 x;
             try
             {
-                b = System.Text.Encoding.Default.GetBytes(certString);
+                b = Encoding.Default.GetBytes(certString);
                 x = new X509Certificate2(b);
                 //_logger.LogDebug($"Found certificate with subject {x.Subject}");
             }
@@ -550,31 +535,34 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 if (b != null)
                 {
                     // Try to handle files that are base64'ed too many times. Possibly unnecessary but harmless.
-                    b = Convert.FromBase64String(System.Text.Encoding.Default.GetString(b));
+                    b = Convert.FromBase64String(Encoding.Default.GetString(b));
+                    // ReSharper disable once RedundantAssignment
                     x = new X509Certificate2(b);
                     //_logger.LogDebug($"Found certificate with subject {x.Subject}");
                 }
 
+                // ReSharper disable once PossibleIntendedRethrow
                 throw e;
             }
 
             return x;
         }
 
-        private bool evaluatePrivateKey(X509Certificate2 cert, string keyString)
+        private bool EvaluatePrivateKey(X509Certificate2 cert, string keyString)
         {
-            if (keyString == "" || keyString == null) return false;
+            if (string.IsNullOrEmpty(keyString)) return false;
             try
             {
-                AsymmetricCipherKeyPair keypair = (AsymmetricCipherKeyPair)new PemReader(new StringReader(keyString)).ReadObject();
-                RsaPrivateCrtKeyParameters privateKey = (RsaPrivateCrtKeyParameters)keypair.Private;
+                var keypair = (AsymmetricCipherKeyPair) new PemReader(new StringReader(keyString)).ReadObject();
+                var privateKey = (RsaPrivateCrtKeyParameters) keypair.Private;
 
                 //RsaKeyParameters publicKey = (RsaKeyParameters)new PemReader(new StringReader(cert.GetPublicKeyString() ?? string.Empty)).ReadObject();
 
-                RsaKeyParameters publicKey = (RsaKeyParameters)DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
-                return (privateKey.Modulus.Equals(publicKey.Modulus) && publicKey.Exponent.Equals(privateKey.PublicExponent));
+                var publicKey = (RsaKeyParameters) DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
+                return privateKey.Modulus.Equals(publicKey.Modulus) &&
+                       publicKey.Exponent.Equals(privateKey.PublicExponent);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //_logger.LogInformation("Unable to evaluate private key - " + e.Message);
                 ////_logger.LogDebug(LogHandler.FlattenException(e));
