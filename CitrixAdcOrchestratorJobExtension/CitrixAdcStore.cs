@@ -11,6 +11,7 @@ using com.citrix.netscaler.nitro.resource.config.system;
 using com.citrix.netscaler.nitro.service;
 using com.citrix.netscaler.nitro.util;
 using Keyfactor.Orchestrators.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -39,6 +40,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         public readonly string storePath;
 
         private nitro_service _nss;
+
+        [ActivatorUtilitiesConstructor]
+        public CitrixAdcStore(ILogger<CitrixAdcStore> logger)
+        {
+            this.logger = logger;
+        }
 
         public CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config)
         {
