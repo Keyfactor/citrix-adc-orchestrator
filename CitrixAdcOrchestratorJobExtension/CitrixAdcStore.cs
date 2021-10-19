@@ -20,7 +20,8 @@ using Org.BouncyCastle.Security;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
-    internal class citrixAdcStore
+    // ReSharper disable once InconsistentNaming
+    internal class CitrixAdcStore
     {
         private const uint Timeout = 3600;
         public static readonly string StoreType = "CitrixAdc";
@@ -39,9 +40,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private nitro_service _nss;
 
-        public citrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config)
+        public CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config)
         {
-            logger.LogDebug("Begin citrixAdcStore Constructor...");
+            logger.LogDebug("Begin CitrixAdcStore Constructor...");
             _clientMachine = config.CertificateStoreDetails.ClientMachine;
             storePath = config.CertificateStoreDetails.StorePath;
 
@@ -51,12 +52,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             _nitroServiceOptions = o;
 
-            logger.LogDebug("Exit citrixAdcStore Constructor...");
+            logger.LogDebug("Exit CitrixAdcStore Constructor...");
         }
 
-        public citrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config)
+        public CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config)
         {
-            logger.LogDebug("Begin citrixAdcStore Constructor...");
+            logger.LogDebug("Begin CitrixAdcStore Constructor...");
             _clientMachine = config.CertificateStoreDetails.ClientMachine;
             storePath = config.CertificateStoreDetails.StorePath;
 
@@ -65,16 +66,16 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             o.set_args($"filelocation:{urlPath}");
 
             _nitroServiceOptions = o;
-            logger.LogDebug("Exit citrixAdcStore Constructor...");
+            logger.LogDebug("Exit CitrixAdcStore Constructor...");
         }
 
-        private citrixAdcStore(JobConfiguration config)
+        private CitrixAdcStore(JobConfiguration config)
         {
-            logger.LogDebug("Begin citrixAdcStore Constructor...");
+            logger.LogDebug("Begin CitrixAdcStore Constructor...");
             _useSsl = config.UseSSL;
             _username = config.ServerUsername;
             _password = config.ServerPassword;
-            logger.LogDebug("Exit citrixAdcStore Constructor...");
+            logger.LogDebug("Exit CitrixAdcStore Constructor...");
 
         }
 

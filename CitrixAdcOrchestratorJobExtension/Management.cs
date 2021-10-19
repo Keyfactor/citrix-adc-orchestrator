@@ -5,21 +5,22 @@ using Microsoft.Extensions.Logging;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
-    public class management : IManagementJobExtension
+    // ReSharper disable once InconsistentNaming
+    public class Management : IManagementJobExtension
     {
         private string _thumbprint = string.Empty;
 
-        public management(ILogger<management> logger)
+        public Management(ILogger<Management> logger)
         {
             this.logger = logger;
         }
 
         private ILogger logger { get; }
-        public string ExtensionName => citrixAdcStore.StoreType;
+        public string ExtensionName => CitrixAdcStore.StoreType;
 
         public JobResult ProcessJob(ManagementJobConfiguration jobConfiguration)
         {
-            var store = new citrixAdcStore(jobConfiguration);
+            var store = new CitrixAdcStore(jobConfiguration);
             logger.LogDebug("Logging into Citrix...");
             store.Login();
 
@@ -34,7 +35,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return result;
         }
 
-        private void PerformAdd(citrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
+        private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
             string virtualServerName, bool overwrite)
         {
             logger.LogTrace("Enter performAdd");
@@ -52,14 +53,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             store.UpdateBindings(keyPairName, virtualServerName);
         }
 
-        private void PerformDelete(citrixAdcStore store, ManagementJobCertificate cert)
+        private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
         {
             logger.LogTrace("Enter PerformDelete");
             store.DeleteFile(cert.Contents, cert.Alias);
             logger.LogTrace("Exit PerformDelete");
         }
 
-        private JobResult ProcessJob(citrixAdcStore store, ManagementJobConfiguration jobConfiguration)
+        private JobResult ProcessJob(CitrixAdcStore store, ManagementJobConfiguration jobConfiguration)
         {
             logger.LogDebug("Begin Management...");
 

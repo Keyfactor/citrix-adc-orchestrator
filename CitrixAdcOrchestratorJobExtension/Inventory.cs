@@ -7,13 +7,14 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
-    public class inventory : IInventoryJobExtension
+    // ReSharper disable once InconsistentNaming
+    public class Inventory : IInventoryJobExtension
     {
         private ILogger logger { get; }
 
-        public string ExtensionName => citrixAdcStore.StoreType;
+        public string ExtensionName => CitrixAdcStore.StoreType;
 
-        public inventory(ILogger<inventory> logger)
+        public Inventory(ILogger<Inventory> logger)
         {
             this.logger = logger;
         }
@@ -25,7 +26,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             logger.LogDebug($"StorePath: {jobConfiguration.CertificateStoreDetails.StorePath}");
 
             logger.LogDebug("Entering ProcessJob");
-            citrixAdcStore store = new citrixAdcStore(jobConfiguration);
+            CitrixAdcStore store = new CitrixAdcStore(jobConfiguration);
 
             logger.LogDebug("Logging into Citrix...");
             store.Login();
@@ -40,7 +41,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return result;
         }
 
-        private JobResult ProcessJob(citrixAdcStore store, InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
+        private JobResult ProcessJob(CitrixAdcStore store, InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
         {
             logger.LogDebug("Begin Inventory...");
             
@@ -55,7 +56,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 // ReSharper disable once CollectionNeverQueried.Local
                 HashSet<string> processedAliases = new HashSet<string>();
 
-                //union the remote keys + last inventory
+                //union the remote keys + last Inventory
                 List<String> contentsToCheck = files?.Select(x => x.filename).Union(existing.Keys).ToList() ?? new List<string>();
 
                 logger.LogDebug("Getting KeyPair list...");
@@ -118,7 +119,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             catch (Exception ex)
             {
-                logger.LogError("Error performing certificate inventory: " + ex.Message);
+                logger.LogError("Error performing certificate Inventory: " + ex.Message);
                 logger.LogDebug(ex.StackTrace);
 
                 //Status: 2=Success, 3=Warning, 4=Error
@@ -126,7 +127,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     Result = Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Failure,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = "Error while performing certificate inventory"
+                    FailureMessage = "Error while performing certificate Inventory"
                 };
             }
 
@@ -147,7 +148,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             catch (Exception ex)
             {
-                logger.LogError("Error submitting certificate inventory: " + ex.Message);
+                logger.LogError("Error submitting certificate Inventory: " + ex.Message);
                 logger.LogDebug(ex.StackTrace);
                 // NOTE: if the cause of the submitInventory.Invoke exception is a communication issue between the Orchestrator server and the Command server, the job status returned here
                 //  may not be reflected in Keyfactor Command.
@@ -155,7 +156,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     Result = Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Failure,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = "Failure while submitting certificate inventory"
+                    FailureMessage = "Failure while submitting certificate Inventory"
                 };
             }
         }
