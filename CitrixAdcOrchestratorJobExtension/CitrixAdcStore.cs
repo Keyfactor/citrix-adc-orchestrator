@@ -194,7 +194,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             systemfile f = new systemfile()
             {
-                filecontent = contents,
                 filename = alias,
                 filelocation = this.storePath
             };

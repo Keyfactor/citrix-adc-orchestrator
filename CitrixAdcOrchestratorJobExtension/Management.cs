@@ -13,6 +13,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         private ILogger _logger { get; }
         public string ExtensionName => CitrixAdcStore.storeType;
 
+        private string _thumbprint = string.Empty;
+
         public Management(ILogger<Management> logger)
         {
             _logger = logger;
@@ -35,7 +37,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
         private void performDelete(CitrixAdcStore store, ManagementJobCertificate cert)
-        {
+        {           
             store.deleteFile(cert.Contents, cert.Alias);
         }
 
@@ -67,9 +69,42 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     case CertStoreOperationType.Add:
                         string virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
-                        string keyPairName = (string)jobConfiguration.JobProperties["keyPairName"]; 
-                        //var keyPairName = Guid.NewGuid().ToString();
-                        performAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName, jobConfiguration.Overwrite);
+                        string keyPairName = (string)jobConfiguration.JobProperties["keyPairName"];
+                        if (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint"))
+                        {
+                            _thumbprint = jobConfiguration.JobProperties["RenewalThumbprint"].ToString();
+                        }
+                        //if there is no thumbprint from Keyfactor then it is an Add, else it is a renewal
+                        if (string.IsNullOrEmpty(_thumbprint))
+                        {
+                            performAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
+                                jobConfiguration.Overwrite);
+                        }
+                        else
+                        {
+                            //PerformRenewal
+                            //1. Get All Keys /config/sslcertkey store.ListKeyPairs()
+                            var keyPairList = store.listKeyPairs();
+                            //2. For Each check the binding /config/sslcertkey_binding store.GetBinding(strKey)
+                            foreach (var kp in keyPairList)
+                            {
+                                var binding = store.getBinding(kp.certkey);
+                                if (binding != null)
+                                {
+                                    //4. Open the file and check the thumbprint
+                                    var x = store.getX509Certificate(kp.cert.Substring(kp.cert.LastIndexOf("/")+1), out bool privateKeyEntry);
+                                    //5. If the Thumbprint matches the cert renewed from KF then PerformAdd With Overwrite 
+                                    if (x?.Thumbprint == _thumbprint)
+                                    {
+                                        foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
+                                        {
+                                            performAdd(store, jobConfiguration.JobCertificate, kp.certkey, sBinding.servername, true);
+                                        }
+                                    }
+                                }
+
+                            }
+                        }
                         break;
                     case CertStoreOperationType.Remove:
                         performDelete(store, jobConfiguration.JobCertificate);
