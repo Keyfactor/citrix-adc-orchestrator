@@ -32,9 +32,11 @@ Key Pair| When Enrolling, this is the name of the Certificate that will be insta
 **Netscaler Cert Store Setup**
 
 *1. Cert Store Base Settings*
+
 ![](Images/CertStore-Base.gif)
 
-*1. Cert Store Credential Setup*
+*2. Cert Store Credential Setup*
+
 ![](Images/CertStore-Credentials.gif)
 
 #### STORE CONFIG
