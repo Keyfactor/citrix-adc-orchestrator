@@ -2,6 +2,7 @@
 using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -70,25 +71,37 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 switch (jobConfiguration.OperationType)
                 {
                     case CertStoreOperationType.Add:
+                        logger.LogDebug("Begin Add...");
                         var virtualServerName = (string) jobConfiguration.JobProperties["virtualServerName"];
                         var keyPairName = (string) jobConfiguration.JobProperties["keyPairName"];
+                        logger.LogTrace($"keyPairName: {keyPairName} virtualServerName {virtualServerName}");
                         if (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint"))
+                        {
                             _thumbprint = jobConfiguration.JobProperties["RenewalThumbprint"].ToString();
+                            logger.LogDebug($"It's a renewal with thumbprint {_thumbprint}");
+                        }
+
                         //if there is no thumbprint from Keyfactor then it is an Add, else it is a renewal
                         if (string.IsNullOrEmpty(_thumbprint))
                         {
+                            logger.LogDebug($"Begin Add/Enrollment... overwrite: {jobConfiguration.Overwrite}");
                             PerformAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
                                 jobConfiguration.Overwrite);
+                            logger.LogDebug("End Add/Enrollment...");
                         }
                         else
                         {
                             //PerformRenewal
                             //1. Get All Keys /config/sslcertkey store.ListKeyPairs()
                             var keyPairList = store.ListKeyPairs();
+
+                            logger.LogTrace($"KeyPairList: {JsonConvert.SerializeObject(keyPairList)}");
+
                             //2. For Each check the binding /config/sslcertkey_binding store.GetBinding(strKey)
                             foreach (var kp in keyPairList)
                             {
                                 var binding = store.GetBinding(kp.certkey);
+                                logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
                                 if (binding != null)
                                 {
                                     //4. Open the file and check the thumbprint
@@ -97,16 +110,25 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                         out _);
                                     //5. If the Thumbprint matches the cert renewed from KF then PerformAdd With Overwrite 
                                     if (x?.Thumbprint == _thumbprint)
+                                    {
+                                        logger.LogTrace($"Thumbprint Match: {_thumbprint}");
                                         foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
+                                        {
+                                            logger.LogTrace($"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
                                             PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
                                                 sBinding.servername, true);
+                                            logger.LogTrace($"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                        }
+                                    }
                                 }
                             }
                         }
 
                         break;
                     case CertStoreOperationType.Remove:
+                        logger.LogDebug("Begin Delete...");
                         PerformDelete(store, jobConfiguration.JobCertificate);
+                        logger.LogDebug("End Delete...");
                         break;
                     case CertStoreOperationType.Create:
                         // The certificate store is the directory
