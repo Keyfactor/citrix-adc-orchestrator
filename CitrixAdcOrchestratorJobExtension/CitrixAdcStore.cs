@@ -11,7 +11,6 @@ using com.citrix.netscaler.nitro.resource.config.system;
 using com.citrix.netscaler.nitro.service;
 using com.citrix.netscaler.nitro.util;
 using Keyfactor.Orchestrators.Extensions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -41,14 +40,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private nitro_service _nss;
 
-        [ActivatorUtilitiesConstructor]
-        public CitrixAdcStore(ILogger<CitrixAdcStore> logger)
-        {
-            this.logger = logger;
-        }
-
         public CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config)
         {
+            var factory = LoggerFactory.Create(b => b.AddConsole());
+            logger = factory.CreateLogger<CitrixAdcStore>();
+
             logger.LogDebug("Begin CitrixAdcStore Constructor...");
             _clientMachine = config.CertificateStoreDetails.ClientMachine;
             storePath = config.CertificateStoreDetails.StorePath;
@@ -64,6 +60,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config)
         {
+            var factory = LoggerFactory.Create(b => b.AddConsole());
+            logger = factory.CreateLogger<CitrixAdcStore>();
+
             logger.LogDebug("Begin CitrixAdcStore Constructor...");
             _clientMachine = config.CertificateStoreDetails.ClientMachine;
             storePath = config.CertificateStoreDetails.StorePath;
@@ -78,6 +77,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private CitrixAdcStore(JobConfiguration config)
         {
+            var factory = LoggerFactory.Create(b => b.AddConsole());
+            logger = factory.CreateLogger<CitrixAdcStore>();
+
             logger.LogDebug("Begin CitrixAdcStore Constructor...");
             _useSsl = config.UseSSL;
             _username = config.ServerUsername;
