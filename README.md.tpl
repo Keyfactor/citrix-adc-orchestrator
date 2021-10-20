@@ -7,5 +7,5 @@
 *** 
 **IIS Binding Orchestrator Configuration**
 
-**Overview**
+![](Images/CertStoreType-Basic.gif)
 
