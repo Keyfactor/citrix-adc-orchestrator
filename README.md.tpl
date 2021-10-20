@@ -22,3 +22,10 @@
 
 *5. Cert Store Type Entry Params - KPEntry*
 ![](Images/CertStoreType-KPEntry.gif)
+
+#### STORE TYPE ENTRY PARAMS
+CONFIG ELEMENT	| DESCRIPTION
+------------------|------------------
+Name	|Descriptive name for the Store Type
+Virtual Server	| When Enrolling, this can be a single or comma separated list of VServers in Netscaler to replace.
+Key Pair| When Enrolling, this is the name of the Certificate that will be installed on Netscaler
