@@ -7,5 +7,5 @@ Orchestrator to manage certificates and keys on one to many VServers in Netscale
 *** 
 **IIS Binding Orchestrator Configuration**
 
-**Overview**
+![](Images/CertStoreType-Basic.gif)
 
