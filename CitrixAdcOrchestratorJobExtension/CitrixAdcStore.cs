@@ -42,9 +42,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config)
         {
-            var factory = LoggerFactory.Create(b => b.AddConsole());
-            logger = factory.CreateLogger<CitrixAdcStore>();
-
+            logger=Logging.LogHandler.GetClassLogger<CitrixAdcStore>();
             logger.LogDebug("Begin CitrixAdcStore Constructor...");
             _clientMachine = config.CertificateStoreDetails.ClientMachine;
             storePath = config.CertificateStoreDetails.StorePath;
@@ -60,9 +58,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config)
         {
-            var factory = LoggerFactory.Create(b => b.AddConsole());
-            logger = factory.CreateLogger<CitrixAdcStore>();
-
+            logger = Logging.LogHandler.GetClassLogger<CitrixAdcStore>();
             logger.LogDebug("Begin CitrixAdcStore Constructor...");
             _clientMachine = config.CertificateStoreDetails.ClientMachine;
             storePath = config.CertificateStoreDetails.StorePath;
@@ -77,8 +73,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private CitrixAdcStore(JobConfiguration config)
         {
-            var factory = LoggerFactory.Create(b => b.AddConsole());
-            logger = factory.CreateLogger<CitrixAdcStore>();
 
             logger.LogDebug("Begin CitrixAdcStore Constructor...");
             _useSsl = config.UseSSL;
