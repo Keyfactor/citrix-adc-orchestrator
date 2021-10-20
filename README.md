@@ -46,3 +46,13 @@ Client Machine	| This is the IP Address of the Netscaler Appliance.
 Store Path| This is the path of the Netscaler Appliance.  The value shown in the screenshot is the default path.
 User| This is the user that will be authenticated against the Netscaler Appliance
 Password| This is the password that will be authenticated against the Netscaler Appliance
+
+**Enrollment Multiple Virtual Servers**
+
+This will enroll the certificate and bind it to multiple VServers.  If you just want one VServer then include that one Server without commas.
+
+*1. Comma Separate the VServers*
+
+![](Images/EnrollMultipleVServers.gif)
+
+![](Images/EnrollMultipleServersNetscaler.gif)
