@@ -68,3 +68,10 @@ This will renew the certificate and update all of the VServer Bindings on Netsca
 This will inventory the certs on the Netscaler appliance and also update the entry parameters back into Keyfactor.
 
 ![](Images/Inventory.gif)
+
+**Remove From Store**
+
+This will remove it from the store on Keyfactor and deleted the associated certificate file on Netscaler.  It will leave the Key Pair and Key on Netscaler.
+You should not need to specify a VServer or KPair for removal.  This can be setup in the configuration of Keyfactor to not be needed for removal.
+
+![](Images/Remove.gif)
