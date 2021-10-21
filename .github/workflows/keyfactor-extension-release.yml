@@ -113,9 +113,9 @@ jobs:
         run: |
            md ${{ github.workspace }}\zip\Keyfactor
            Compress-Archive -Path `
-           ${{ env.SOLUTION_FOLDER }}\${{ env.PROJECT_FOLDER }}\bin\Release\*.dll, `
-           ${{ env.SOLUTION_FOLDER }}\${{ env.PROJECT_FOLDER }}\bin\Release\*.json, `
-           ${{ env.SOLUTION_FOLDER }}\${{ env.PROJECT_FOLDER }}\bin\Release\*.config `
+           ${{ env.SOLUTION_FOLDER }}\${{ env.PROJECT_FOLDER }}\bin\Release\netcoreapp3.1\*.dll, `
+           ${{ env.SOLUTION_FOLDER }}\${{ env.PROJECT_FOLDER }}\bin\Release\netcoreapp3.1\*.json, `
+           ${{ env.SOLUTION_FOLDER }}\${{ env.PROJECT_FOLDER }}\bin\Release\netcoreapp3.1\*.config `
            -DestinationPath ${{ github.workspace }}\zip\Keyfactor\$Env:REPO_NAME.zip -Force      
       
       - name: Upload Release Asset (x64)
