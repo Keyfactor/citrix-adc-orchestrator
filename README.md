@@ -56,3 +56,9 @@ This will enroll the certificate and bind it to multiple VServers.  If you just 
 ![](Images/EnrollMultipleVServers.gif)
 
 ![](Images/EnrollMultipleServersNetscaler.gif)
+
+**Renewal**
+
+This will renew the certificate and update all of the VServer Bindings on Netscaler that have that same thumprint.
+
+![](Images/Renewal.gif)
