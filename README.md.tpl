@@ -59,6 +59,12 @@ This will enroll the certificate and bind it to multiple VServers.  If you just 
 
 **Renewal**
 
-This will renew the certificate and update all of the VServer Bindings on Netscaler that have that same thumprint.
+This will renew the certificate and update all of the VServer Bindings on Netscaler that have that same thumbprint.
 
 ![](Images/Renewal.gif)
+
+**Inventory**
+
+This will inventory the certs on the Netscaler appliance and also update the entry parameters back into Keyfactor.
+
+![](Images/Inventory.gif)
