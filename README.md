@@ -49,6 +49,18 @@ Store Path| This is the path of the Netscaler Appliance.  The value shown in the
 User| This is the user that will be authenticated against the Netscaler Appliance
 Password| This is the password that will be authenticated against the Netscaler Appliance
 
+**Netscaler permissions needed**
+
+The Netscaler user needs permission to perform the following API calls:
+
+API Endpoint|Methods
+---|---
+/nitro/v1/config/login|post
+/nitro/v1/config/lbvserver| get
+/nitro/v1/config/sslcertkey| get, update, add, delete
+/nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
+/nitro/v1/config/systemfile| get, add, delete
+
 **Enrollment Multiple Virtual Servers**
 
 This will enroll the certificate and bind it to multiple VServers.  If you just want one VServer then include that one Server without commas.
