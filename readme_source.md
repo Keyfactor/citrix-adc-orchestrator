@@ -1,12 +1,3 @@
-# {{ name }}
-## {{ integration_type | capitalize }}
-
-{{ description }}
-
-## Integration status: {{ status | capitalize }}
-
-<!-- add integration specific information below -->
-*** 
 **Netscaler Cert Store Type Setup**
 
 *1. Cert Store Type Basic Settings*

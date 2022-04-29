@@ -3,5 +3,6 @@
   "integration_type": "orchestrator",
   "name": "Citrix Netscaler Universal Orchestrator",
   "status": "production",
+  "link_github": false,
   "description": "Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store."
 }
