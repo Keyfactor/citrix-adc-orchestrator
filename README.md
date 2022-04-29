@@ -96,3 +96,4 @@ This will remove it from the store on Keyfactor and deleted the associated certi
 You should not need to specify a VServer or KPair for removal.  This can be setup in the configuration of Keyfactor to not be needed for removal.
 
 ![](Images/Remove.gif)
+
