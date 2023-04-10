@@ -1,6 +1,8 @@
 ﻿using System;
+using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
+using Keyfactor.Orchestrators.Extensions.Interfaces;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -11,17 +13,36 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
     {
         private string _thumbprint = string.Empty;
 
-        public Management(ILogger<Management> logger)
+        private readonly IPAMSecretResolver resolver;
+
+        private ILogger logger;
+
+        private string serverUserName { get; set; }
+
+        private string serverPassword { get; set; }
+
+        public Management(IPAMSecretResolver resolver)
         {
-            this.logger = logger;
+            this.resolver = resolver;
         }
 
-        private ILogger logger { get; }
         public string ExtensionName => CitrixAdcStore.StoreType;
+
+        private string ResolvePamField(string name, string value)
+        {
+            logger.LogTrace($"Attempting to resolved PAM eligible field {name}");
+            return resolver.Resolve(value);
+        }
 
         public JobResult ProcessJob(ManagementJobConfiguration jobConfiguration)
         {
-            var store = new CitrixAdcStore(jobConfiguration);
+            logger = LogHandler.GetClassLogger<Management>();
+
+            serverPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
+            serverUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
+
+            var store = new CitrixAdcStore(jobConfiguration,serverUserName,serverPassword);
+
             logger.LogDebug("Logging into Citrix...");
             store.Login();
 
@@ -41,7 +62,21 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             logger.LogTrace("Enter performAdd");
 
-            var alias = Guid.NewGuid().ToString();
+            //1. To prevent downtime, Create Temp Cert to bind (this will be removed at the end)
+            //var  tempCertId=Guid.NewGuid().ToString();
+            //AddBindCert(store, cert, tempCertId, virtualServerName, overwrite, tempCertId);
+            
+            //2. Add and Bind the Real Cert that came in from Keyfactor
+            var alias = cert.Alias;
+            AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias);
+
+            //3. Delete the temp cert because the new cert has been bound
+            //store.DeleteFile(cert.Contents, tempCertId);
+        }
+
+        private void AddBindCert(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
+            string virtualServerName, bool overwrite, string alias)
+        {
             var (pemFile, privateKeyFile) =
                 store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, alias, overwrite);
 
@@ -73,7 +108,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     case CertStoreOperationType.Add:
                         logger.LogDebug("Begin Add...");
                         var virtualServerName = (string) jobConfiguration.JobProperties["virtualServerName"];
-                        var keyPairName = (string) jobConfiguration.JobProperties["keyPairName"];
+                        
+                        //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
+                        var keyPairName = jobConfiguration.JobCertificate.Alias;
+                        
                         logger.LogTrace($"keyPairName: {keyPairName} virtualServerName {virtualServerName}");
                         if (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint"))
                         {

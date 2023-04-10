@@ -30,29 +30,35 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private readonly string _clientMachine;
 
-        private readonly options _nitroServiceOptions;
-        private readonly string _password;
-        private readonly string _username;
-        private readonly bool _useSsl;
+        private readonly systemfile_args nitroServiceOptions;
+        private readonly string password;
+        private readonly string username;
+        private readonly bool useSsl;
 
         public readonly string storePath;
 
-        private nitro_service _nss;
+        private nitro_service nss;
 
-        public CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config)
+        public CitrixAdcStore(InventoryJobConfiguration config, string serverUserName, string serverPassword)
         {
             try
             {
+                logger = LogHandler.GetClassLogger<CitrixAdcStore>();
                 logger.LogDebug(
                     "Begin CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config) Constructor...");
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
                 storePath = config.CertificateStoreDetails.StorePath;
-                var o = new options();
+                var o = new systemfile_args();
                 var urlPath = HttpUtility.UrlEncode(storePath);
-                logger.LogTrace($"UrlPath: {urlPath}");
-                o.set_args($"filelocation:{urlPath}");
+                useSsl = config.UseSSL;
+                username = serverUserName;
+                password = serverPassword;
 
-                _nitroServiceOptions = o;
+                logger.LogTrace($"UrlPath: {urlPath}");
+                o.filelocation = urlPath;
+                //o.set_args($"filelocation:{urlPath}");
+
+                nitroServiceOptions = o;
 
                 logger.LogDebug(
                     "Exit CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config) Constructor...");
@@ -65,21 +71,25 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config)
+        public CitrixAdcStore(ManagementJobConfiguration config,string serverUserName, string serverPassword)
         {
             try
             {
+                logger = LogHandler.GetClassLogger<CitrixAdcStore>();
                 logger.LogDebug(
                     "Begin CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config) Constructor...");
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
                 storePath = config.CertificateStoreDetails.StorePath;
-
-                var o = new options();
+                useSsl = config.UseSSL;
+                username = serverUserName;
+                password = serverPassword;
+                var o = new systemfile_args();
                 var urlPath = HttpUtility.UrlEncode(storePath);
                 logger.LogTrace($"UrlPath: {urlPath}");
-                o.set_args($"filelocation:{urlPath}");
+                o.filelocation = urlPath;
+                //o.set_args($"filelocation:{urlPath}");
 
-                _nitroServiceOptions = o;
+                nitroServiceOptions = o;
                 logger.LogDebug(
                     "Exit CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config) Constructor...");
             }
@@ -91,36 +101,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        private CitrixAdcStore(JobConfiguration config)
-        {
-            try
-            {
-                logger = LogHandler.GetClassLogger<CitrixAdcStore>();
-                logger.LogDebug("Begin CitrixAdcStore(JobConfiguration config) Constructor...");
-                _useSsl = config.UseSSL;
-                _username = config.ServerUsername;
-                _password = config.ServerPassword;
-                logger.LogDebug("Exit CitrixAdcStore(JobConfiguration config) Constructor...");
-            }
-            catch (Exception e)
-            {
-                logger.LogError(
-                    $"Error Occured in CitrixAdcStore(JobConfiguration config): {LogHandler.FlattenException(e)}");
-                throw;
-            }
-        }
-
         // ReSharper disable once UnusedAutoPropertyAccessor.Local
         private ILogger logger { get; }
 
         public void Login()
         {
             logger.LogDebug("Entering CitrixAdcStore Login Method...");
-            _nss ??= new nitro_service(_clientMachine, _useSsl ? "https" : "http");
+            nss ??= new nitro_service(_clientMachine, useSsl ? "https" : "http");
             base_response response = null;
             try
             {
-                response = _nss.login(_username, _password, Timeout);
+                response = nss.login(username, password, Timeout);
                 logger.LogDebug($"Login Response: {JsonConvert.SerializeObject(response)}");
             }
             catch (Exception ex)
@@ -130,7 +121,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             finally
             {
-                if (response != null && !_nss.isLogin()) throw new Exception(response.message);
+                if (response != null && !nss.isLogin()) throw new Exception(response.message);
             }
 
             logger.LogDebug("Exiting CitrixAdcStore Login Method...");
@@ -141,7 +132,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             try
             {
                 logger.LogDebug("Entering Logout Method...");
-                _nss.logout();
+                nss.logout();
                 //TODO: process resp
             }
             catch (Exception e)
@@ -159,7 +150,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             try
             {
                 logger.LogDebug($"Entering and Exiting GetBinding Method... CertKey={certKey}");
-                return sslcertkey_binding.get(_nss, certKey);
+                return sslcertkey_binding.get(nss, certKey);
             }
             catch (Exception e)
             {
@@ -173,7 +164,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             try
             {
                 logger.LogDebug("Entering and Exiting ListKeyPairs() Method...");
-                return sslcertkey.get(_nss);
+                return sslcertkey.get(nss);
             }
             catch (Exception e)
             {
@@ -187,7 +178,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             try
             {
                 logger.LogDebug("Entering and Exiting ListFiles() Method...");
-                return systemfile.get(_nss, _nitroServiceOptions);
+                return systemfile.get(nss, nitroServiceOptions);
             }
             catch (Exception e)
             {
@@ -196,14 +187,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string password,
+        public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string pwd,
             string alias, bool overwrite)
         {
             try
             {
                 logger.LogDebug("Entering UploadCertificate() Method...");
-                var (pemFile, privateKeyFile) = GetPem(contents, password, alias);
-                logger.LogTrace($"Contents: {contents} password: {password} alias: {alias} overwrite: {overwrite}");
+                var (pemFile, privateKeyFile) = GetPem(contents, pwd, alias);
+                logger.LogTrace($"Contents: {contents} pwd: {pwd} alias: {alias} overwrite: {overwrite}");
 
                 logger.LogTrace("Starting UploadFile(pemFile,overwrite) call");
                 //upload certificate
@@ -236,7 +227,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 logger.LogDebug($"File Content: {JsonConvert.SerializeObject(f)}");
                 logger.LogTrace("Trying to add File");
-                var _ = systemfile.add(_nss, f);
+                var _ = systemfile.add(nss, f);
                 logger.LogTrace("File Added");
             }
             catch (nitro_exception ne)
@@ -252,8 +243,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         filelocation = f.filelocation
                     };
                     logger.LogDebug($"Old File Content: {JsonConvert.SerializeObject(fOld)}");
-                    systemfile.delete(_nss, fOld);
-                    systemfile.add(_nss, f);
+                    systemfile.delete(nss, fOld);
+                    systemfile.add(nss, f);
                 }
                 else
                 {
@@ -291,7 +282,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 logger.LogDebug("Entering and Exiting DeleteFile() Method...");
                 logger.LogTrace($"Deleting certificate at {f.filelocation}/{f.filename}");
-                return systemfile.delete(_nss, f);
+                return systemfile.delete(nss, f);
             }
             catch (Exception e)
             {
@@ -308,7 +299,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 logger.LogTrace($"certPath: {certPath}");
                 var filters = new filtervalue[1];
                 filters[0] = new filtervalue("cert", certPath);
-                var filteredResults = sslcertkey.get_filtered(_nss, filters);
+                var filteredResults = sslcertkey.get_filtered(nss, filters);
                 logger.LogTrace($"filteredResults: {JsonConvert.SerializeObject(filteredResults)}");
                 if (filteredResults != null && filteredResults.Length > 0) return filteredResults[0].certkey;
                 logger.LogDebug("Exiting FindKeyPairByCertPath(string certPath) Method...");
@@ -332,7 +323,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var filters = new filtervalue[1];
                 filters[0] = new filtervalue("certKey", keyPairName);
                 logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {keyPairName}");
-                var count = sslcertkey.count_filtered(_nss, filters);
+                var count = sslcertkey.count_filtered(nss, filters);
                 logger.LogTrace($"Count of certkey with {keyPairName}: {count}");
 
                 if (count > 0)
@@ -353,7 +344,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     result.nodomaincheck = true;
 
                     logger.LogTrace($"Updating certificate-key pair with name {keyPairName}");
-                    var _ = sslcertkey.change(_nss, result);
+                    var _ = sslcertkey.change(nss, result);
+                    var unused = sslcertkey.update(nss, result);
                 }
                 else
                 {
@@ -370,7 +362,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     }
 
                     logger.LogTrace($"Adding certificate-key pair with name {keyPairName}");
-                    sslcertkey.add(_nss, s);
+                    sslcertkey.add(nss, s);
                     logger.LogTrace($"Finished Adding certificate-key pair with name {keyPairName}");
                 }
             }
@@ -408,9 +400,21 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 logger.LogTrace($"pemFile Content: {JsonConvert.SerializeObject(pemFile)}");
                 logger.LogTrace($"privateKey Content: {JsonConvert.SerializeObject(privateKey)}");
 
-                var certPath = storePath + "/" + alias;
+                var certPath = storePath + "/" + keyPairName;
                 logger.LogTrace($"certPath: {certPath}");
 
+                //see if keypair already exists, if it does then we have to generate a new name to prevent downtime
+                logger.LogTrace($"keyPairName: {keyPairName} certPath:{certPath} checking if already exists.");
+                /*var filters = new filtervalue[1];
+                filters[0] = new filtervalue("certKey", keyPairName);
+                logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {keyPairName}");
+                var count = sslcertkey.count_filtered(nss, filters);
+                logger.LogTrace($"Count of certkey with {keyPairName}: {count}");
+
+                if(count>0)
+                    keyPairName = GenerateKeyPairName(alias);
+                */
+                
                 if (string.IsNullOrWhiteSpace(keyPairName))
                 {
                     logger.LogTrace("string.IsNullOrWhiteSpace(keyPairName) is True");
@@ -423,16 +427,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     }
                     else
                     {
-                        // If keyPairName is not specified then create one based upon the alias and serial number
-                        var cert = new X509Certificate2(Convert.FromBase64String(pemFile.filecontent));
-                        keyPairName = alias.Substring(0, Math.Min(22, alias.Length))
-                                      + "-" + new string(cert.SerialNumber?.Reverse().ToArray() ?? Array.Empty<char>());
-                        keyPairName = keyPairName.Substring(0, Math.Min(31, keyPairName.Length));
-                        logger.LogTrace($"keyPairName: {keyPairName}");
+                        keyPairName = GenerateKeyPairName(alias);
                     }
                 }
-
-
+                
                 string keyPath = null;
                 if (privateKey != null) keyPath = storePath + "/" + alias + ".key";
                 logger.LogTrace($"keyPath: {keyPath}");
@@ -446,6 +444,22 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     $"Error Occurred in UpdateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey): {LogHandler.FlattenException(e)}");
                 throw;
             }
+        }
+
+        private string GenerateKeyPairName(string alias)
+        {
+            if (alias == alias.Substring(0, Math.Min(40, alias.Length)))
+            {
+                alias = alias.Substring(0, Math.Min(40, alias.Length));
+            }
+            else
+            {
+                alias=alias.Substring(0, Math.Min(40, alias.Length));
+            }
+            
+            
+            logger.LogTrace($"keyPairName: {alias}");
+            return alias;
         }
 
         public void UpdateBindings(string keyPairName, string virtualServerName)
@@ -465,7 +479,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             vservername = vsName
                         };
                         logger.LogTrace($"Adding binding {keyPairName} for virtual server {virtualServerName}");
-                        sslvserver_sslcertkey_binding.add(_nss, ssb);
+                        sslvserver_sslcertkey_binding.add(nss, ssb);
 
                         logger.LogDebug("Exit UpdateBindings(string keyPairName, string virtualServerName)");
                     }
@@ -529,20 +543,20 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        private (systemfile, systemfile) GetPem(string contents, string password, string alias)
+        private (systemfile, systemfile) GetPem(string contents, string pwd, string alias)
         {
             try
             {
-                logger.LogDebug("Entering GetPem(string contents, string password, string alias)");
+                logger.LogDebug("Entering GetPem(string contents, string pwd, string alias)");
                 var pemFile = new systemfile();
                 systemfile privateKeyFile = null;
 
-                if (!string.IsNullOrWhiteSpace(password)) // PFX Entry
+                if (!string.IsNullOrWhiteSpace(pwd)) // PFX Entry
                 {
-                    logger.LogTrace($"Has Password: {password}");
+                    logger.LogTrace($"Has Password: {pwd}");
                     // Load PFX
                     var pfxBytes = Convert.FromBase64String(contents);
-                    var (certPem, privateKey) = GetPemFromPfx(pfxBytes, password.ToCharArray());
+                    var (certPem, privateKey) = GetPemFromPfx(pfxBytes, pwd.ToCharArray());
 
                     // create private key file
                     privateKeyFile = new systemfile
@@ -565,14 +579,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 pemFile.filename = alias;
                 pemFile.filelocation = storePath;
                 logger.LogTrace($"pemFile Content: {JsonConvert.SerializeObject(pemFile)}");
-                logger.LogDebug("Exiting GetPem(string contents, string password, string alias)");
+                logger.LogDebug("Exiting GetPem(string contents, string pwd, string alias)");
 
                 return (pemFile, privateKeyFile);
             }
             catch (Exception e)
             {
                 logger.LogError(
-                    $"Error Occurred in GetPem(string contents, string password, string alias): {LogHandler.FlattenException(e)}");
+                    $"Error Occurred in GetPem(string contents, string pwd, string alias): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
@@ -679,13 +693,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             try
             {
                 logger.LogDebug("Entering GetSystemFile(string fileName)");
-                var option = new options();
+                var option = new systemfile_args();
 
                 var urlPath = HttpUtility.UrlEncode(storePath);
                 logger.LogTrace($"urlPath: {urlPath} fileName:{fileName}");
 
-                option.set_args($"filelocation:{urlPath},filename:{fileName}");
-                var results = systemfile.get(_nss, option);
+                //option.set_args($"filelocation:{urlPath},filename:{fileName}");
+                option.filelocation = urlPath;
+                var results = systemfile.get(nss, option);
                 logger.LogDebug("Exiting GetSystemFile(string fileName)");
 
                 if (results.Length > 0)
