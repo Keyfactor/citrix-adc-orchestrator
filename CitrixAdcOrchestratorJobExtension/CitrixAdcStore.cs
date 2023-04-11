@@ -49,15 +49,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
                 storePath = config.CertificateStoreDetails.StorePath;
                 var o = new systemfile_args();
-                var urlPath = HttpUtility.UrlEncode(storePath);
                 useSsl = config.UseSSL;
                 username = serverUserName;
                 password = serverPassword;
 
-                logger.LogTrace($"UrlPath: {urlPath}");
-                o.filelocation = urlPath;
-                //o.set_args($"filelocation:{urlPath}");
-
+                logger.LogTrace($"Store Path: {storePath}");
+                o.filelocation = storePath;
                 nitroServiceOptions = o;
 
                 logger.LogDebug(
@@ -71,7 +68,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public CitrixAdcStore(ManagementJobConfiguration config,string serverUserName, string serverPassword)
+        public CitrixAdcStore(ManagementJobConfiguration config, string serverUserName, string serverPassword)
         {
             try
             {
@@ -84,10 +81,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 username = serverUserName;
                 password = serverPassword;
                 var o = new systemfile_args();
-                var urlPath = HttpUtility.UrlEncode(storePath);
-                logger.LogTrace($"UrlPath: {urlPath}");
-                o.filelocation = urlPath;
-                //o.set_args($"filelocation:{urlPath}");
+
+                logger.LogTrace($"UrlPath: {storePath}");
+                o.filelocation = storePath;
 
                 nitroServiceOptions = o;
                 logger.LogDebug(
@@ -156,6 +152,20 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 logger.LogError($"Error in GetBinding(): {LogHandler.FlattenException(e)}");
                 return null;
+            }
+        }
+
+        public sslcertkey GetKeyPairByName(string name)
+        {
+            try
+            {
+                logger.LogDebug("Entering and Exiting ListKeyPairs() Method...");
+                return sslcertkey.get(nss, name);
+            }
+            catch (Exception e)
+            {
+                logger.LogError($"Error in ListKeyPairs(): {LogHandler.FlattenException(e)}");
+                throw;
             }
         }
 
@@ -254,7 +264,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public base_response DeleteFile(string contents, string alias)
+        public base_response DeleteFile(string alias)
         {
             try
             {
@@ -290,6 +300,23 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 throw;
             }
         }
+
+        public base_response DeleteKeyPair(sslcertkey f)
+        {
+            try
+            {
+                logger.LogDebug("Entering and Exiting DeleteFile() Method...");
+                logger.LogTrace($"Deleting certificate at {f}");
+                return sslcertkey.delete(nss, f);
+            }
+            catch (Exception e)
+            {
+                logger.LogError($"Error Occurred in DeleteFile(): {LogHandler.FlattenException(e)}");
+                throw;
+            }
+        }
+
+
 
         public string FindKeyPairByCertPath(string certPath)
         {
@@ -369,7 +396,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             catch (nitro_exception ne)
             {
                 logger.LogError($"Exception occured while trying to add or update {keyPairName}");
-                if ((((uint) ne.HResult).Equals(0x80138500) || ((uint) ne.HResult).Equals(0x80131500)) &&
+                if ((((uint)ne.HResult).Equals(0x80138500) || ((uint)ne.HResult).Equals(0x80131500)) &&
                     ne.Message.Contains("Resource already exists"))
                 {
                     if (ne.Message.Contains("certkeyName Contents,"))
@@ -414,7 +441,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 if(count>0)
                     keyPairName = GenerateKeyPairName(alias);
                 */
-                
+
                 if (string.IsNullOrWhiteSpace(keyPairName))
                 {
                     logger.LogTrace("string.IsNullOrWhiteSpace(keyPairName) is True");
@@ -430,7 +457,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         keyPairName = GenerateKeyPairName(alias);
                     }
                 }
-                
+
                 string keyPath = null;
                 if (privateKey != null) keyPath = storePath + "/" + alias + ".key";
                 logger.LogTrace($"keyPath: {keyPath}");
@@ -454,10 +481,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             else
             {
-                alias=alias.Substring(0, Math.Min(40, alias.Length));
+                alias = alias.Substring(0, Math.Min(40, alias.Length));
             }
-            
-            
+
+
             logger.LogTrace($"keyPairName: {alias}");
             return alias;
         }
@@ -694,19 +721,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 logger.LogDebug("Entering GetSystemFile(string fileName)");
                 var option = new systemfile_args();
-
-                var urlPath = HttpUtility.UrlEncode(storePath);
-                logger.LogTrace($"urlPath: {urlPath} fileName:{fileName}");
+                logger.LogTrace($"urlPath: {storePath} fileName:{fileName}");
 
                 //option.set_args($"filelocation:{urlPath},filename:{fileName}");
-                option.filelocation = urlPath;
-                var results = systemfile.get(nss, option);
+                option.filelocation = storePath;
+                systemfile f = new systemfile();
+                f.filelocation = storePath;
+                f.filename = fileName;
+                var result = systemfile.get(nss, f);
                 logger.LogDebug("Exiting GetSystemFile(string fileName)");
-
-                if (results.Length > 0)
-                    return results[0];
-
-                logger.LogDebug($"filelocation:{urlPath},filename:{fileName} not found");
+                return result;
+                logger.LogDebug($"filelocation:{storePath},filename:{fileName} not found");
                 throw new Exception("file not found");
             }
             catch (Exception e)
@@ -764,10 +789,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             if (string.IsNullOrEmpty(keyString)) return false;
             try
             {
-                var keypair = (AsymmetricCipherKeyPair) new PemReader(new StringReader(keyString)).ReadObject();
-                var privateKey = (RsaPrivateCrtKeyParameters) keypair.Private;
+                var keypair = (AsymmetricCipherKeyPair)new PemReader(new StringReader(keyString)).ReadObject();
+                var privateKey = (RsaPrivateCrtKeyParameters)keypair.Private;
 
-                var publicKey = (RsaKeyParameters) DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
+                var publicKey = (RsaKeyParameters)DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
                 logger.LogDebug("Exiting EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
 
                 return privateKey.Modulus.Equals(publicKey.Modulus) &&

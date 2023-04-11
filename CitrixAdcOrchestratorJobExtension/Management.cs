@@ -5,6 +5,7 @@ using Keyfactor.Orchestrators.Extensions;
 using Keyfactor.Orchestrators.Extensions.Interfaces;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.IO;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -41,7 +42,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             serverPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
             serverUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
 
-            var store = new CitrixAdcStore(jobConfiguration,serverUserName,serverPassword);
+            var store = new CitrixAdcStore(jobConfiguration, serverUserName, serverPassword);
 
             logger.LogDebug("Logging into Citrix...");
             store.Login();
@@ -65,7 +66,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             //1. To prevent downtime, Create Temp Cert to bind (this will be removed at the end)
             //var  tempCertId=Guid.NewGuid().ToString();
             //AddBindCert(store, cert, tempCertId, virtualServerName, overwrite, tempCertId);
-            
+
             //2. Add and Bind the Real Cert that came in from Keyfactor
             var alias = cert.Alias;
             AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias);
@@ -92,7 +93,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
         {
             logger.LogTrace("Enter PerformDelete");
-            store.DeleteFile(cert.Contents, cert.Alias);
+            var sslKeyFile = store.GetKeyPairByName(cert.Alias);
+
+            //1. Delete the Keypair
+            store.DeleteKeyPair(sslKeyFile);
+
+            //2. Remove directory from file name, Delete the Key File
+            store.DeleteFile(Path.GetFileName(sslKeyFile.key));
+
+            //3. Remove directory from file name, Delete the Certificate File
+            store.DeleteFile(Path.GetFileName(sslKeyFile.cert));
+
             logger.LogTrace("Exit PerformDelete");
         }
 
@@ -107,11 +118,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     case CertStoreOperationType.Add:
                         logger.LogDebug("Begin Add...");
-                        var virtualServerName = (string) jobConfiguration.JobProperties["virtualServerName"];
-                        
+                        var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
+
                         //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
                         var keyPairName = jobConfiguration.JobCertificate.Alias;
-                        
+
                         logger.LogTrace($"keyPairName: {keyPairName} virtualServerName {virtualServerName}");
                         if (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint"))
                         {

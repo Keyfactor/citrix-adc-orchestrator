@@ -115,12 +115,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             _logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
                             parameters.Add("virtualServerName", virtualServerName);
                         }
-                        //TODO: Other binding methods
-                        //binding.sslcertkey_service_binding
-                        //binding.sslcertkey_crldistribution_binding
-                        //binding.sslcertkey_sslocspresponder_binding
                     }
-
 
                     inventory.Add(new CurrentInventoryItem()
                     {
