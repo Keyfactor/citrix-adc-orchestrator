@@ -19,6 +19,9 @@
     <None Update="Inventory.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="ManagementRenew.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Management.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

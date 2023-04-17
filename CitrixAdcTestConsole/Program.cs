@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Keyfactor.Extensions.Orchestrator.CitricAdc;
@@ -36,6 +37,7 @@ namespace CitrixAdcTestConsole
         public static string virtualServerName { get; set; }
         public static string keyPairName { get; set; }
         public static string overwrite { get; set; }
+        public static string renewal { get; set; }
         public static string managementType { get; set; }
         public static string certificateContent { get; set; }
 
@@ -61,21 +63,7 @@ namespace CitrixAdcTestConsole
                 storePath = arguments["-storepath"];
                 clientMachine = arguments["-clientmachine"];
             }
-            else
-            {
-                Console.WriteLine("Enter The Case Name Inventory or Management");
-                caseName = Console.ReadLine();
-                Console.WriteLine("Enter User Name");
-                userName = Console.ReadLine();
-                Console.WriteLine("Enter The Password");
-                password = Console.ReadLine();
-                Console.WriteLine("Enter Store Path");
-                storePath = Console.ReadLine();
-                Console.WriteLine("Enter ClientMachine");
-                clientMachine = Console.ReadLine();
-            }
-
-
+            
             // Display message to user to provide parameters.
             Console.WriteLine("Running");
 
@@ -111,15 +99,7 @@ namespace CitrixAdcTestConsole
                             certAlias = arguments["-certalias"];
                             virtualServerName = arguments["-virtualservername"];
                             overwrite = arguments["-overwrite"];
-                        }
-                        else
-                        {
-                            Console.WriteLine("Virutal Server Name");
-                            virtualServerName = Console.ReadLine();
-                            Console.WriteLine("Enter Cert Alias");
-                            certAlias = Console.ReadLine();
-                            Console.WriteLine("Overwrite (True or False)?");
-                            overwrite = Console.ReadLine();
+                            renewal = arguments["-isrenew"];
                         }
 
                         Console.WriteLine("Start Generated Cert in KF API");
@@ -127,8 +107,12 @@ namespace CitrixAdcTestConsole
                         var kfResult = client.EnrollCertificate($"citrixadc.boingy.com").Result;
                         certificateContent = kfResult.CertificateInformation.Pkcs12Blob;
                         Console.WriteLine("End Generated Cert in KF API");
+                        
+                        if(renewal.ToUpper()=="FALSE") 
+                            SetRenewThumbprint(kfResult.CertificateInformation.Thumbprint);
 
-                        var jobConfiguration = GetManagementJobConfiguration();
+                        var jobConfiguration = GetManagementJobConfiguration(renewal.ToUpper() == "TRUE" ? "ManagementRenewModified" : "Management");
+
                         var mgmtSecretResolver = new Mock<IPAMSecretResolver>();
                         mgmtSecretResolver
                             .Setup(m => m.Resolve(It.Is<string>(s => s == jobConfiguration.ServerUsername)))
@@ -138,21 +122,17 @@ namespace CitrixAdcTestConsole
                             .Returns(() => jobConfiguration.ServerPassword);
                         var mgmt = new Management(mgmtSecretResolver.Object);
 
+
                         var result = mgmt.ProcessJob(jobConfiguration);
                         Console.Write(JsonConvert.SerializeObject(result));
                         Console.ReadLine();
                     }
 
-                    if (mgmtType.ToUpper() == "REMOVE")
+                    if (mgmtType != null && mgmtType.ToUpper() == "REMOVE")
                     {
                         if (args.Length > 0)
                         {
                             certAlias = arguments["-certalias"];
-                        }
-                        else
-                        {
-                            Console.WriteLine("Enter Cert Alias");
-                            certAlias = Console.ReadLine();
                         }
 
                         var jobConfig = GetRemoveJobConfiguration();
@@ -172,7 +152,6 @@ namespace CitrixAdcTestConsole
                     break;
             }
         }
-
 
         public static bool GetItems(IEnumerable<CurrentInventoryItem> items)
         {
@@ -198,7 +177,7 @@ namespace CitrixAdcTestConsole
             return result;
         }
 
-        public static ManagementJobConfiguration GetManagementJobConfiguration()
+        public static ManagementJobConfiguration GetManagementJobConfiguration(string fileName)
         {
 
             var overWriteReplaceString = "\"Overwrite\": false";
@@ -207,7 +186,7 @@ namespace CitrixAdcTestConsole
                 overWriteReplaceString = "\"Overwrite\": true";
             }
 
-            var fileContent = File.ReadAllText("Management.json").Replace("UserNameGoesHere", userName)
+            var fileContent = File.ReadAllText($"{fileName}.json").Replace("UserNameGoesHere", userName)
                 .Replace("PasswordGoesHere", password).Replace("TemplateNameGoesHere", storePath)
                 .Replace("AliasGoesHere", certAlias)
                 .Replace("ClientMachineGoesHere", clientMachine)
@@ -218,6 +197,14 @@ namespace CitrixAdcTestConsole
                 JsonConvert.DeserializeObject<ManagementJobConfiguration>(fileContent);
             return result;
         }
+
+        public static void SetRenewThumbprint(string lastThumbprint)
+        {
+            var fileContent = File.ReadAllText("ManagementRenew.json")
+                .Replace("ThumbprintGoesHere",lastThumbprint);
+            File.WriteAllText("ManagementRenewModified.json", fileContent, Encoding.UTF8);
+        }
+
 
         public static ManagementJobConfiguration GetRemoveJobConfiguration()
         {
