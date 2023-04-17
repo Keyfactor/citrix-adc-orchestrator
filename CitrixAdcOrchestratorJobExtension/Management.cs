@@ -62,18 +62,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             string virtualServerName, bool overwrite)
         {
             logger.LogTrace("Enter performAdd");
-
-            //1. To prevent downtime, Create Temp Cert to bind (this will be removed at the end)
-            //var  tempCertId=Guid.NewGuid().ToString();
-            //AddBindCert(store, cert, tempCertId, virtualServerName, overwrite, tempCertId);
-
-            //2. Add and Bind the Real Cert that came in from Keyfactor
             var alias = cert.Alias;
             AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias);
-
-            //3. Delete the temp cert because the new cert has been bound
-            //store.DeleteFile(cert.Contents, tempCertId);
         }
+
+
 
         private void AddBindCert(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
             string virtualServerName, bool overwrite, string alias)
@@ -117,60 +110,76 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 switch (jobConfiguration.OperationType)
                 {
                     case CertStoreOperationType.Add:
-                        logger.LogDebug("Begin Add...");
-                        var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
-
-                        //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
-                        var keyPairName = jobConfiguration.JobCertificate.Alias;
-
-                        logger.LogTrace($"keyPairName: {keyPairName} virtualServerName {virtualServerName}");
-                        if (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint"))
+                        var dup = store.IsDuplicateCertificate(jobConfiguration.JobCertificate.Alias);
+                        if ((dup && jobConfiguration.Overwrite) || !dup || (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint")))
                         {
-                            _thumbprint = jobConfiguration.JobProperties["RenewalThumbprint"].ToString();
-                            logger.LogDebug($"It's a renewal with thumbprint {_thumbprint}");
-                        }
+                            logger.LogDebug("Begin Add...");
+                            var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
 
-                        //if there is no thumbprint from Keyfactor then it is an Add, else it is a renewal
-                        if (string.IsNullOrEmpty(_thumbprint))
-                        {
-                            logger.LogDebug($"Begin Add/Enrollment... overwrite: {jobConfiguration.Overwrite}");
-                            PerformAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
-                                jobConfiguration.Overwrite);
-                            logger.LogDebug("End Add/Enrollment...");
-                        }
-                        else
-                        {
-                            //PerformRenewal
-                            //1. Get All Keys /config/sslcertkey store.ListKeyPairs()
-                            var keyPairList = store.ListKeyPairs();
+                            //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
+                            var keyPairName = jobConfiguration.JobCertificate.Alias;
 
-                            logger.LogTrace($"KeyPairList: {JsonConvert.SerializeObject(keyPairList)}");
-
-                            //2. For Each check the binding /config/sslcertkey_binding store.GetBinding(strKey)
-                            foreach (var kp in keyPairList)
+                            logger.LogTrace($"keyPairName: {keyPairName} virtualServerName {virtualServerName}");
+                            if (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint"))
                             {
-                                var binding = store.GetBinding(kp.certkey);
-                                logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
-                                if (binding != null)
+                                _thumbprint = jobConfiguration.JobProperties["RenewalThumbprint"].ToString();
+                                logger.LogDebug($"It's a renewal with thumbprint {_thumbprint}");
+                            }
+
+                            //if there is no thumbprint from Keyfactor then it is an Add, else it is a renewal
+                            if (string.IsNullOrEmpty(_thumbprint))
+                            {
+                                logger.LogDebug($"Begin Add/Enrollment... overwrite: {jobConfiguration.Overwrite}");
+                                PerformAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
+                                    jobConfiguration.Overwrite);
+                                logger.LogDebug("End Add/Enrollment...");
+                            }
+                            else
+                            {
+                                //PerformRenewal
+                                //1. Get All Keys /config/sslcertkey store.ListKeyPairs()
+                                var keyPairList = store.ListKeyPairs();
+
+                                logger.LogTrace($"KeyPairList: {JsonConvert.SerializeObject(keyPairList)}");
+
+                                //2. For Each check the binding /config/sslcertkey_binding store.GetBinding(strKey)
+                                foreach (var kp in keyPairList)
                                 {
-                                    //4. Open the file and check the thumbprint
-                                    var x = store.GetX509Certificate(
-                                        kp.cert.Substring(kp.cert.LastIndexOf("/", StringComparison.Ordinal) + 1),
-                                        out _);
-                                    //5. If the Thumbprint matches the cert renewed from KF then PerformAdd With Overwrite 
-                                    if (x?.Thumbprint == _thumbprint)
+                                    var binding = store.GetBinding(kp.certkey);
+                                    logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
+                                    if (binding != null)
                                     {
-                                        logger.LogTrace($"Thumbprint Match: {_thumbprint}");
-                                        foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
+                                        //4. Open the file and check the thumbprint
+                                        var x = store.GetX509Certificate(
+                                            kp.cert.Substring(kp.cert.LastIndexOf("/", StringComparison.Ordinal) + 1),
+                                            out _);
+                                        //5. If the Thumbprint matches the cert renewed from KF then PerformAdd With Overwrite 
+                                        if (x?.Thumbprint == _thumbprint)
                                         {
-                                            logger.LogTrace($"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
-                                            PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
-                                                sBinding.servername, true);
-                                            logger.LogTrace($"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                            logger.LogTrace($"Thumbprint Match: {_thumbprint}");
+                                            foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
+                                            {
+                                                logger.LogTrace(
+                                                    $"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                                PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
+                                                    sBinding.servername, true);
+                                                logger.LogTrace(
+                                                    $"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                            }
                                         }
                                     }
                                 }
                             }
+                        }
+                        else
+                        {
+                            return new JobResult
+                            {
+                                Result = OrchestratorJobStatusJobResult.Failure,
+                                JobHistoryId = jobConfiguration.JobHistoryId,
+                                FailureMessage =
+                                    $"You must use overwrite, a duplicate alias was found {jobConfiguration.JobCertificate.Alias}"
+                            };
                         }
 
                         break;

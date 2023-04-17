@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Web;
 using com.citrix.netscaler.nitro.exception;
 using com.citrix.netscaler.nitro.resource.Base;
 using com.citrix.netscaler.nitro.resource.config.ssl;
@@ -432,15 +431,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 //see if keypair already exists, if it does then we have to generate a new name to prevent downtime
                 logger.LogTrace($"keyPairName: {keyPairName} certPath:{certPath} checking if already exists.");
-                /*var filters = new filtervalue[1];
-                filters[0] = new filtervalue("certKey", keyPairName);
-                logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {keyPairName}");
-                var count = sslcertkey.count_filtered(nss, filters);
-                logger.LogTrace($"Count of certkey with {keyPairName}: {count}");
-
-                if(count>0)
-                    keyPairName = GenerateKeyPairName(alias);
-                */
 
                 if (string.IsNullOrWhiteSpace(keyPairName))
                 {
@@ -731,14 +721,25 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var result = systemfile.get(nss, f);
                 logger.LogDebug("Exiting GetSystemFile(string fileName)");
                 return result;
-                logger.LogDebug($"filelocation:{storePath},filename:{fileName} not found");
-                throw new Exception("file not found");
             }
             catch (Exception e)
             {
                 logger.LogError($"Error Occurred in GetSystemFile(string fileName): {LogHandler.FlattenException(e)}");
                 throw;
             }
+        }
+
+        public bool IsDuplicateCertificate(string alias)
+        {
+            var filters = new filtervalue[1];
+            filters[0] = new filtervalue("certKey", alias);
+            logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {alias}");
+            var count = sslcertkey.count_filtered(nss, filters);
+            logger.LogTrace($"Count of certkey with {alias}: {count}");
+
+            if (count > 0)
+                return true;
+            return false;
         }
 
         private X509Certificate2 ReadX509Certificate(string certString)
