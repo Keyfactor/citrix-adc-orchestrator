@@ -33,8 +33,7 @@ echo ***************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
-CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername= -overwrite=%overwrite% -isrenew=false
-
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername= -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
 set mgt=remove
 set overwrite=false
 
@@ -44,7 +43,7 @@ echo ***************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
-CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername= -overwrite=%overwrite% -isrenew=false
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername= -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
 
 set cert=%random%
 set mgt=add
@@ -56,7 +55,7 @@ echo ***************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
-CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer -overwrite=%overwrite% -isrenew=false
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
 
 set cert=%random%
 set casename=Management
@@ -69,7 +68,7 @@ echo ***************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
-CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer,TestVServer2 -overwrite=%overwrite% -isrenew=false
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer,TestVServer2 -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
 
 set mgt=remove
 set overwrite=false
@@ -81,9 +80,7 @@ echo ***************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
-CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=false
-
-#:bindingscenario
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
 
 set mgt=add
 set overwrite=true
@@ -95,7 +92,7 @@ echo ***************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
-CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=true
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=true -snicert=false -domain=citrixadc.boingy.com
 
 set mgt=add
 set overwrite=false
@@ -107,7 +104,7 @@ echo ***************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
-CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=false
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
 
 set mgt=add
 set overwrite=true
@@ -119,5 +116,30 @@ echo ***************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
-CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=false
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
+
+#:bindingscenario
+set mgt=add
+set overwrite=false
+set cert=%random%
+
+echo ************************************************************************************************************************
+echo TC9 %mgt% add bound certificate with Alias Sni.  Should do the %mgt% and bind the sni certificate to one virtual server
+echo ************************************************************************************************************************
+echo overwrite: %overwrite%
+echo cert name: %cert%
+
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer2 -overwrite=%overwrite% -isrenew=false -snicert=true -domain=sni.boingy.com
+
+set mgt=add
+set overwrite=true
+
+echo ***********************************************************************************************************************
+echo TC10 %mgt% replace bound cert with Alias Sni.  Should do the %mgt% and bind the sni certificate to one virtual server
+echo ***********************************************************************************************************************
+echo overwrite: %overwrite%
+echo cert name: %cert%
+
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer2 -overwrite=%overwrite% -isrenew=true -snicert=true -domain=sni.boingy.com
+
 @pause

@@ -479,7 +479,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return alias;
         }
 
-        public void UpdateBindings(string keyPairName, string virtualServerName)
+        public void UpdateBindings(string keyPairName, string virtualServerName,bool sniCert)
         {
             try
             {
@@ -493,7 +493,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         var ssb = new sslvserver_sslcertkey_binding
                         {
                             certkeyname = keyPairName,
-                            vservername = vsName
+                            vservername = vsName,
+                            snicert = sniCert
                         };
                         logger.LogTrace($"Adding binding {keyPairName} for virtual server {virtualServerName}");
                         sslvserver_sslcertkey_binding.add(nss, ssb);

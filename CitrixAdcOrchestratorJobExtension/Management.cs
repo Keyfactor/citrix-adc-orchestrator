@@ -59,17 +59,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
         private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite)
+            string virtualServerName, bool overwrite,bool sniCert)
         {
             logger.LogTrace("Enter performAdd");
             var alias = cert.Alias;
-            AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias);
+            AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias,sniCert);
         }
 
 
 
         private void AddBindCert(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite, string alias)
+            string virtualServerName, bool overwrite, string alias,bool sniCert)
         {
             var (pemFile, privateKeyFile) =
                 store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, alias, overwrite);
@@ -80,7 +80,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             logger.LogDebug("Updating cert bindings");
             //update cert bindings
-            store.UpdateBindings(keyPairName, virtualServerName);
+            store.UpdateBindings(keyPairName, virtualServerName,sniCert);
         }
 
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
@@ -115,6 +115,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         {
                             logger.LogDebug("Begin Add...");
                             var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
+                            var sniCert = (bool) jobConfiguration.JobProperties["sniCert"];
 
                             //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
                             var keyPairName = jobConfiguration.JobCertificate.Alias;
@@ -131,7 +132,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             {
                                 logger.LogDebug($"Begin Add/Enrollment... overwrite: {jobConfiguration.Overwrite}");
                                 PerformAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
-                                    jobConfiguration.Overwrite);
+                                    jobConfiguration.Overwrite, sniCert);
                                 logger.LogDebug("End Add/Enrollment...");
                             }
                             else
@@ -162,7 +163,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                                 logger.LogTrace(
                                                     $"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
                                                 PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
-                                                    sBinding.servername, true);
+                                                    sBinding.servername, true,sniCert);
                                                 logger.LogTrace(
                                                     $"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
                                             }
