@@ -38,6 +38,8 @@ namespace CitrixAdcTestConsole
         public static string keyPairName { get; set; }
         public static string overwrite { get; set; }
         public static string renewal { get; set; }
+        public static string domain { get; set; }
+        public static string snicert { get; set; }
         public static string managementType { get; set; }
         public static string certificateContent { get; set; }
 
@@ -100,11 +102,13 @@ namespace CitrixAdcTestConsole
                             virtualServerName = arguments["-virtualservername"];
                             overwrite = arguments["-overwrite"];
                             renewal = arguments["-isrenew"];
+                            snicert = arguments["-snicert"];
+                            domain = arguments["-domain"];
                         }
 
                         Console.WriteLine("Start Generated Cert in KF API");
                         var client = new KeyfactorClient();
-                        var kfResult = client.EnrollCertificate($"citrixadc.boingy.com").Result;
+                        var kfResult = client.EnrollCertificate($"{domain}").Result;
                         certificateContent = kfResult.CertificateInformation.Pkcs12Blob;
                         Console.WriteLine("End Generated Cert in KF API");
                         
@@ -186,13 +190,20 @@ namespace CitrixAdcTestConsole
                 overWriteReplaceString = "\"Overwrite\": true";
             }
 
+            var sniOverwriteString = "\"sniCert\": false";
+            if (snicert.ToUpper() == "TRUE")
+            {
+                sniOverwriteString = "\"sniCert\": true";
+            }
+
             var fileContent = File.ReadAllText($"{fileName}.json").Replace("UserNameGoesHere", userName)
                 .Replace("PasswordGoesHere", password).Replace("TemplateNameGoesHere", storePath)
                 .Replace("AliasGoesHere", certAlias)
                 .Replace("ClientMachineGoesHere", clientMachine)
                 .Replace("virtualServerNameGoesHere", virtualServerName)
                 .Replace("\"Overwrite\": false", overWriteReplaceString)
-                .Replace("CertificateContentGoesHere", certificateContent);
+                .Replace("CertificateContentGoesHere", certificateContent)
+                .Replace("\"sniCert\": false", sniOverwriteString);
             var result =
                 JsonConvert.DeserializeObject<ManagementJobConfiguration>(fileContent);
             return result;

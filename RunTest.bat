@@ -26,7 +26,7 @@ set casename=Management
 set mgt=add
 set overwrite=false
 
-#goto bindingscenario
+goto bindingscenario
 echo ************************************************************************************************************************
 echo TC1 %mgt% add unbound certificate.  Should do the %mgt% and not bind the certificate to any virtual servers
 echo ************************************************************************************************************************
@@ -118,7 +118,7 @@ echo cert name: %cert%
 
 CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
 
-#:bindingscenario
+:bindingscenario
 set mgt=add
 set overwrite=false
 set cert=%random%

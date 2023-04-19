@@ -73,3 +73,4 @@ C:\Users\bhill\source\repos\citrix-adc-orchestrator\CitrixAdcTestConsole\obj\Deb
 C:\Users\bhill\source\repos\citrix-adc-orchestrator\CitrixAdcTestConsole\bin\Debug\netcoreapp3.1\Inventory.json
 C:\Users\bhill\source\repos\citrix-adc-orchestrator\CitrixAdcTestConsole\bin\Debug\netcoreapp3.1\Management.json
 C:\Users\bhill\source\repos\citrix-adc-orchestrator\CitrixAdcTestConsole\bin\Debug\netcoreapp3.1\ManagementRemove.json
+C:\Users\bhill\source\repos\citrix-adc-orchestrator\CitrixAdcTestConsole\bin\Debug\netcoreapp3.1\ManagementRenew.json

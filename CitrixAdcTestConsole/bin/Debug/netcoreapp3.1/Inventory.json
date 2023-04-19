@@ -17,5 +17,5 @@
   "JobProperties": null,
   "JobTypeId": "00000000-0000-0000-0000-000000000000",
   "JobId": "ffca3981-adb2-4a7f-af09-4d0e1ac380b1",
-  "Capability": "CertStores.PaloAlto.Inventory"
+  "Capability": "CertStores.CitricAdc.Inventory"
 }

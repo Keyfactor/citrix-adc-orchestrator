@@ -23,9 +23,10 @@
   "ServerPassword": "PasswordGoesHere",
   "UseSSL": true,
   "JobProperties": {
-    "virtualServerName": "virtualServerNameGoesHere"
+    "virtualServerName": "virtualServerNameGoesHere",
+    "sniCert": false
   },
   "JobTypeId": "00000000-0000-0000-0000-000000000000",
   "JobId": "6808e1a2-04bb-4008-89fc-649662c0cd2b",
-  "Capability": "CertStores.PaloAlto.Management"
+  "Capability": "CertStores.CitricAdc.Management"
 }
