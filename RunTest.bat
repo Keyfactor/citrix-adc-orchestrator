@@ -135,11 +135,32 @@ set mgt=add
 set overwrite=true
 
 echo ***********************************************************************************************************************
-echo TC10 %mgt% replace bound cert with Alias Sni.  Should do the %mgt% and bind the sni certificate to one virtual server
+echo TC10 %mgt% renew bound cert with Alias Sni.  Should do the %mgt% and bind the sni certificate to one virtual server
 echo ***********************************************************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
 CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer2 -overwrite=%overwrite% -isrenew=true -snicert=true -domain=sni.boingy.com
 
+set mgt=add
+set overwrite=true
+
+echo ***********************************************************************************************************************
+echo TC11 %mgt% replace bound cert with Alias Sni.  Should do the %mgt% and bind the sni certificate to one virtual server
+echo ***********************************************************************************************************************
+echo overwrite: %overwrite%
+echo cert name: %cert%
+
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer2 -overwrite=%overwrite% -isrenew=false -snicert=true -domain=sni.boingy.com
+
+set mgt=remove
+set overwrite=true
+
+echo ***********************************************************************************************************************
+echo TC12 %mgt% remove bound cert with Alias Sni.  Should not allow the %mgt% since it is bound
+echo ***********************************************************************************************************************
+echo overwrite: %overwrite%
+echo cert name: %cert%
+
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer2 -overwrite=%overwrite% -isrenew=false -snicert=true -domain=sni.boingy.com
 @pause
