@@ -57,6 +57,7 @@ echo cert name: %cert%
 
 CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
 
+:bindingscenario
 set cert=%random%
 set casename=Management
 set mgt=add
@@ -68,7 +69,7 @@ echo ***************************************************************************
 echo overwrite: %overwrite%
 echo cert name: %cert%
 
-CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer,TestVServer2 -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer,TestVServer2 -overwrite=%overwrite% -isrenew=false -snicert=false,false -domain=citrixadc.boingy.com
 
 set mgt=remove
 set overwrite=false
@@ -118,7 +119,6 @@ echo cert name: %cert%
 
 CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=  -overwrite=%overwrite% -isrenew=false -snicert=false -domain=citrixadc.boingy.com
 
-:bindingscenario
 set mgt=add
 set overwrite=false
 set cert=%random%
@@ -163,4 +163,18 @@ echo overwrite: %overwrite%
 echo cert name: %cert%
 
 CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer2 -overwrite=%overwrite% -isrenew=false -snicert=true -domain=sni.boingy.com
+
+
+set mgt=add
+set overwrite=true
+
+echo ***********************************************************************************************************************
+echo TC13 %mgt% Multiple Server Replace.  Should allow the %mgt% on multiple servers and update the SNI Accordingly on both
+echo ***********************************************************************************************************************
+echo overwrite: %overwrite%
+echo cert name: %cert%
+
+CitrixAdcTestConsole.exe -clientmachine=%clientmachine% -casename=%casename% -user=%user% -password=%password% -storepath=%storepath% -managementtype=%mgt% -certalias=%cert% -virtualservername=TestVServer,TestVServer2 -overwrite=%overwrite% -isrenew=false -snicert=false,true -domain=sni.boingy.com
+
+
 @pause

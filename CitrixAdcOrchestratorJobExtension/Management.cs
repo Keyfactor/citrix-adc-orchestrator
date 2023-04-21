@@ -59,7 +59,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
         private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite,bool sniCert)
+            string virtualServerName, bool overwrite,string sniCert)
         {
             logger.LogTrace("Enter performAdd");
             var alias = cert.Alias;
@@ -69,7 +69,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
 
         private void AddBindCert(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite, string alias,bool sniCert)
+            string virtualServerName, bool overwrite, string alias,string sniCert)
         {
             var (pemFile, privateKeyFile) =
                 store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, alias, overwrite);
@@ -115,7 +115,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         {
                             logger.LogDebug("Begin Add...");
                             var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
-                            var sniCert = (bool) jobConfiguration.JobProperties["sniCert"];
+                            var sniCert =  (string)jobConfiguration.JobProperties["sniCert"];
 
                             //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
                             var keyPairName = jobConfiguration.JobCertificate.Alias;

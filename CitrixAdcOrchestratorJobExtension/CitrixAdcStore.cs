@@ -31,10 +31,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private readonly systemfile_args nitroServiceOptions;
         private readonly string password;
-        private readonly string username;
-        private readonly bool useSsl;
 
         public readonly string storePath;
+        private readonly string username;
+        private readonly bool useSsl;
 
         private nitro_service nss;
 
@@ -316,7 +316,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
 
-
         public string FindKeyPairByCertPath(string certPath)
         {
             try
@@ -395,7 +394,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             catch (nitro_exception ne)
             {
                 logger.LogError($"Exception occured while trying to add or update {keyPairName}");
-                if ((((uint)ne.HResult).Equals(0x80138500) || ((uint)ne.HResult).Equals(0x80131500)) &&
+                if ((((uint) ne.HResult).Equals(0x80138500) || ((uint) ne.HResult).Equals(0x80131500)) &&
                     ne.Message.Contains("Resource already exists"))
                 {
                     if (ne.Message.Contains("certkeyName Contents,"))
@@ -463,51 +462,72 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
+        public sslvserver_sslcertkey_binding[] GetBindingByVServer(string vServerName)
+        {
+            try
+            {
+                logger.LogDebug($"Entering and Exiting GetBindingByVServerKey Method... vServerName={vServerName}");
+                return sslvserver_sslcertkey_binding.get(nss, vServerName);
+            }
+            catch (Exception e)
+            {
+                logger.LogError($"Error in GetBinding(): {LogHandler.FlattenException(e)}");
+                return null;
+            }
+        }
+
         private string GenerateKeyPairName(string alias)
         {
             if (alias == alias.Substring(0, Math.Min(40, alias.Length)))
-            {
                 alias = alias.Substring(0, Math.Min(40, alias.Length));
-            }
             else
-            {
                 alias = alias.Substring(0, Math.Min(40, alias.Length));
-            }
 
 
             logger.LogTrace($"keyPairName: {alias}");
             return alias;
         }
 
-        public void UpdateBindings(string keyPairName, string virtualServerName,bool sniCert)
+        public void UpdateBindings(string keyPairName, string virtualServerName, string sniCert)
         {
             try
             {
                 logger.LogDebug("Enter UpdateBindings(string keyPairName, string virtualServerName)");
 
+
+                var sniArray = sniCert.Split(',');
+
                 if (!string.IsNullOrWhiteSpace(virtualServerName))
+                {
+                    var i = 0;
                     foreach (var vsName in virtualServerName.Split(","))
                     {
+                        var sniBool = false;
+                        if (!string.IsNullOrEmpty(sniCert) &&
+                            (sniArray[i].ToUpper() == "TRUE" || sniArray[i].ToUpper() == "FALSE"))
+                            sniBool = Convert.ToBoolean(sniArray[i]);
+
                         logger.LogTrace($"Updating bindings for {virtualServerName}");
                         //bind key-pair to vserver
                         var ssb = new sslvserver_sslcertkey_binding
                         {
                             certkeyname = keyPairName,
                             vservername = vsName,
-                            snicert = sniCert
+                            snicert = sniBool
                         };
                         logger.LogTrace($"Adding binding {keyPairName} for virtual server {virtualServerName}");
 
                         //Citrix Requires you do delete first when SNI with same domain or you will get a duplicate domain error
                         var filters = new filtervalue[1];
                         filters[0] = new filtervalue("certKeyName", keyPairName);
-                        if (sniCert && sslvserver_sslcertkey_binding.count_filtered(nss,vsName, filters) >0)
+                        if (sniBool && sslvserver_sslcertkey_binding.count_filtered(nss, vsName, filters) > 0)
                             sslvserver_sslcertkey_binding.delete(nss, ssb);
                         sslvserver_sslcertkey_binding.add(nss, ssb);
-                        
 
+                        i++;
                         logger.LogDebug("Exit UpdateBindings(string keyPairName, string virtualServerName)");
                     }
+                }
             }
             catch (Exception e)
             {
@@ -723,9 +743,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 //option.set_args($"filelocation:{urlPath},filename:{fileName}");
                 option.filelocation = storePath;
-                systemfile f = new systemfile();
-                f.filelocation = storePath;
-                f.filename = fileName;
+                var f = new systemfile {filelocation = storePath, filename = fileName};
                 var result = systemfile.get(nss, f);
                 logger.LogDebug("Exiting GetSystemFile(string fileName)");
                 return result;
@@ -798,10 +816,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             if (string.IsNullOrEmpty(keyString)) return false;
             try
             {
-                var keypair = (AsymmetricCipherKeyPair)new PemReader(new StringReader(keyString)).ReadObject();
-                var privateKey = (RsaPrivateCrtKeyParameters)keypair.Private;
+                var keypair = (AsymmetricCipherKeyPair) new PemReader(new StringReader(keyString)).ReadObject();
+                var privateKey = (RsaPrivateCrtKeyParameters) keypair.Private;
 
-                var publicKey = (RsaKeyParameters)DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
+                var publicKey = (RsaKeyParameters) DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
                 logger.LogDebug("Exiting EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
 
                 return privateKey.Modulus.Equals(publicKey.Modulus) &&

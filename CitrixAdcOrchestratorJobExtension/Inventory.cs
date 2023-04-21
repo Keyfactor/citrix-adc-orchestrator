@@ -110,10 +110,19 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         var binding = store.GetBinding(keyPairName);
 
                         var vserverBindings = binding?.sslcertkey_sslvserver_binding;
-                        if (vserverBindings != null) { 
-                            var virtualServerName = String.Join(",", vserverBindings.Select(p=>p.servername));
+                        if (vserverBindings != null)
+                        {
+                            var virtualServerName = String.Join(",", vserverBindings.Select(p => p.servername));
                             _logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
                             parameters.Add("virtualServerName", virtualServerName);
+                            string bindingsCsv = string.Empty;
+                            foreach (string server in virtualServerName.Split(','))
+                            {
+                                var bindings = store.GetBindingByVServer(server);
+                                var first = bindings.FirstOrDefault(b => b.certkeyname == keyPairName);
+                                if (first != null) bindingsCsv += first.snicert + ",";
+                            }
+                            parameters.Add("sniCert", bindingsCsv.TrimEnd(','));
                         }
                     }
 

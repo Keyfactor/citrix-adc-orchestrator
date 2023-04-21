@@ -190,11 +190,7 @@ namespace CitrixAdcTestConsole
                 overWriteReplaceString = "\"Overwrite\": true";
             }
 
-            var sniOverwriteString = "\"sniCert\": false";
-            if (snicert.ToUpper() == "TRUE")
-            {
-                sniOverwriteString = "\"sniCert\": true";
-            }
+            var sniOverwriteString = $"\"sniCert\": \"{snicert}\"";
 
             var fileContent = File.ReadAllText($"{fileName}.json").Replace("UserNameGoesHere", userName)
                 .Replace("PasswordGoesHere", password).Replace("TemplateNameGoesHere", storePath)
@@ -203,7 +199,7 @@ namespace CitrixAdcTestConsole
                 .Replace("virtualServerNameGoesHere", virtualServerName)
                 .Replace("\"Overwrite\": false", overWriteReplaceString)
                 .Replace("CertificateContentGoesHere", certificateContent)
-                .Replace("\"sniCert\": false", sniOverwriteString);
+                .Replace("\"sniCert\": \"false\"", sniOverwriteString);
             var result =
                 JsonConvert.DeserializeObject<ManagementJobConfiguration>(fileContent);
             return result;
