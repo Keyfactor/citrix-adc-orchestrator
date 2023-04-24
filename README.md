@@ -33,21 +33,42 @@ ___
 
 **Netscaler Cert Store Type Setup**
 
-*1. Cert Store Type Basic Settings*
+**Basic Settings:**
 
-![](Images/CertStoreType-Basic.gif)
+CONFIG ELEMENT	| DESCRIPTION
+------------------|------------------
+Name	|A descriptive name for the extension.  Example:  CitrixAdc
+Short Name	|The short name that identifies the registered functionality of the orchestrator. Must be CitrixAdc.
+Custom Capability|Store type name orchestrator will register with. Uncheck This
+Job Types	|Inventory (Checked), check the additional checkboxes: Add, Remove
+General Settings|Needs Server - Checked<br>Blueprint Allowed - Unchecked<br>Uses PowerShell - Unchecked
+Requires Store Password	|Determines if a store password is required when configuring an individual store.  This must be unchecked.
+Supports Entry Password	|Determined if an individual entry within a store can have a password.  This must be unchecked.
 
-*2. Cert Store Type Advanced Settings*
-![](Images/CertStoreType-Advanced.gif)
+**Advanced Settings:**
 
-*3. Cert Store Type Custom Fields*
-![](Images/CertStoreType-CustomFields.gif)
+CONFIG ELEMENT	| DESCRIPTION
+------------------|------------------
+Store Path Type	|Determines what restrictions are applied to the store path field when configuring a new store.  Select Freeform
+Supports Custom Alias	|Determines if an individual entry within a store can have a custom Alias.  This must be Required.
+Private Keys	|This determines if Keyfactor can send the private key associated with a certificate to the store.  This is required since Citrix ADC will need the private key material to establish TLS connections.
+PFX Password Style	|This determines how the platform generate passwords to protect a PFX enrollment job that is delivered to the store.  This can be either Default (system generated) or Custom (user determined).
 
-*4. Cert Store Type Entry Params - Virtual Server*
-![](Images/CertStoreType-VServerEntry.gif)
+**Custom Fields:**
 
-*5. Cert Store Type Entry Params - KPEntry*
-![](Images/CertStoreType-KPEntry.gif)
+Parameter Name|Display Name|Parameter Type|Default Value|Required|Description
+---|---|---|---|---|---
+ServerUsername|Server Username|Secret||No|The username to log into the Server
+ServerPassword|Server Password|Secret||No|The password that matches the username to log into the Server
+ServerUseSsl|Use SSL|Bool|True|Yes|Determine whether the server uses SSL or not
+
+**Custom Fields:**
+
+Parameter Name|Display Name|Parameter Type|Default Value|Required When
+---|---|---|---|---
+virtualServerName|Virtual Server Name|String| |Leave All Unchecked
+sniCert|SNI Cert|String|false|Adding Entry
+
 
 #### STORE TYPE ENTRY PARAMS
 CONFIG ELEMENT	| DESCRIPTION
@@ -57,21 +78,16 @@ Key Pair| When Enrolling, this is the name of the Certificate that will be insta
 
 **Netscaler Cert Store Setup**
 
-*1. Cert Store Base Settings*
-
-![](Images/CertStore-Base.gif)
-
-*2. Cert Store Credential Setup*
-
-![](Images/CertStore-Credentials.gif)
-
 #### STORE CONFIG
 CONFIG ELEMENT	| DESCRIPTION
 ------------------|------------------
 Client Machine	| This is the IP Address of the Netscaler Appliance.
-Store Path| This is the path of the Netscaler Appliance.  The value shown in the screenshot is the default path.
+Store Path| This is the path of the Netscaler Appliance.  /nsconfig/ssl/.
 User| This is the user that will be authenticated against the Netscaler Appliance
 Password| This is the password that will be authenticated against the Netscaler Appliance
+Use SSL| This should be set to True in Production when there is a valid certificate.
+Inventory Schedule| Set this for the appropriate inventory interval needed.
+
 
 **Netscaler permissions needed**
 
@@ -85,32 +101,21 @@ API Endpoint|Methods
 /nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
 /nitro/v1/config/systemfile| get, add, delete
 
-**Enrollment Multiple Virtual Servers**
+## Test Cases
 
-This will enroll the certificate and bind it to multiple VServers.  If you just want one VServer then include that one Server without commas.
-
-*1. Comma Separate the VServers*
-
-![](Images/EnrollMultipleVServers.gif)
-
-![](Images/EnrollMultipleServersNetscaler.gif)
-
-**Renewal**
-
-This will renew the certificate and update all of the VServer Bindings on Netscaler that have that same thumbprint.
-
-![](Images/Renewal.gif)
-
-**Inventory**
-
-This will inventory the certs on the Netscaler appliance and also update the entry parameters back into Keyfactor.
-
-![](Images/Inventory.gif)
-
-**Remove From Store**
-
-This will remove it from the store on Keyfactor and deleted the associated certificate file on Netscaler.  It will leave the Key Pair and Key on Netscaler.
-You should not need to specify a VServer or KPair for removal.  This can be setup in the configuration of Keyfactor to not be needed for removal.
-
-![](Images/Remove.gif)
+Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
+----|------------------------|------------------------------------|--------------|----------------|-------------------------
+1	|Add Unbound Cert|**Alias:** TC1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+2	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+3	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+4	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+5	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+6	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+7	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+8	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+9	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+10	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+11	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+12	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+13	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
 
