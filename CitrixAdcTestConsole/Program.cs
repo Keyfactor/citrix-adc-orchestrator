@@ -28,20 +28,20 @@ namespace CitrixAdcTestConsole
 {
     internal class Program
     {
-        public static string userName { get; set; }
-        public static string password { get; set; }
-        public static string caseName { get; set; }
-        public static string certAlias { get; set; }
-        public static string clientMachine { get; set; }
-        public static string storePath { get; set; }
-        public static string virtualServerName { get; set; }
-        public static string keyPairName { get; set; }
-        public static string overwrite { get; set; }
-        public static string renewal { get; set; }
-        public static string domain { get; set; }
-        public static string snicert { get; set; }
-        public static string managementType { get; set; }
-        public static string certificateContent { get; set; }
+        public static string UserName { get; set; }
+        public static string Password { get; set; }
+        public static string CaseName { get; set; }
+        public static string CertAlias { get; set; }
+        public static string ClientMachine { get; set; }
+        public static string StorePath { get; set; }
+        public static string VirtualServerName { get; set; }
+        public static string KeyPairName { get; set; }
+        public static string Overwrite { get; set; }
+        public static string Renewal { get; set; }
+        public static string Domain { get; set; }
+        public static string Snicert { get; set; }
+        public static string ManagementType { get; set; }
+        public static string CertificateContent { get; set; }
 
 #pragma warning disable 1998
         private static async Task Main(string[] args)
@@ -59,17 +59,17 @@ namespace CitrixAdcTestConsole
             }
             if (args.Length > 0)
             {
-                caseName = arguments["-casename"];
-                userName = arguments["-user"];
-                password = arguments["-password"];
-                storePath = arguments["-storepath"];
-                clientMachine = arguments["-clientmachine"];
+                CaseName = arguments["-casename"];
+                UserName = arguments["-user"];
+                Password = arguments["-password"];
+                StorePath = arguments["-storepath"];
+                ClientMachine = arguments["-clientmachine"];
             }
             
             // Display message to user to provide parameters.
             Console.WriteLine("Running");
 
-            switch (caseName)
+            switch (CaseName)
             {
                 case "Inventory":
                     Console.WriteLine("Running Inventory");
@@ -98,24 +98,24 @@ namespace CitrixAdcTestConsole
                     {
                         if (args.Length > 0)
                         {
-                            certAlias = arguments["-certalias"];
-                            virtualServerName = arguments["-virtualservername"];
-                            overwrite = arguments["-overwrite"];
-                            renewal = arguments["-isrenew"];
-                            snicert = arguments["-snicert"];
-                            domain = arguments["-domain"];
+                            CertAlias = arguments["-certalias"];
+                            VirtualServerName = arguments["-virtualservername"];
+                            Overwrite = arguments["-overwrite"];
+                            Renewal = arguments["-isrenew"];
+                            Snicert = arguments["-snicert"];
+                            Domain = arguments["-domain"];
                         }
 
                         Console.WriteLine("Start Generated Cert in KF API");
                         var client = new KeyfactorClient();
-                        var kfResult = client.EnrollCertificate($"{domain}").Result;
-                        certificateContent = kfResult.CertificateInformation.Pkcs12Blob;
+                        var kfResult = client.EnrollCertificate($"{Domain}").Result;
+                        CertificateContent = kfResult.CertificateInformation.Pkcs12Blob;
                         Console.WriteLine("End Generated Cert in KF API");
                         
-                        if(renewal.ToUpper()=="FALSE") 
+                        if(Renewal.ToUpper()=="FALSE") 
                             SetRenewThumbprint(kfResult.CertificateInformation.Thumbprint);
 
-                        var jobConfiguration = GetManagementJobConfiguration(renewal.ToUpper() == "TRUE" ? "ManagementRenewModified" : "Management");
+                        var jobConfiguration = GetManagementJobConfiguration(Renewal.ToUpper() == "TRUE" ? "ManagementRenewModified" : "Management");
 
                         var mgmtSecretResolver = new Mock<IPAMSecretResolver>();
                         mgmtSecretResolver
@@ -136,7 +136,7 @@ namespace CitrixAdcTestConsole
                     {
                         if (args.Length > 0)
                         {
-                            certAlias = arguments["-certalias"];
+                            CertAlias = arguments["-certalias"];
                         }
 
                         var jobConfig = GetRemoveJobConfiguration();
@@ -164,8 +164,8 @@ namespace CitrixAdcTestConsole
 
         public static InventoryJobConfiguration GetInventoryJobConfiguration()
         {
-            var fileContent = File.ReadAllText("FirewallInventory.json").Replace("UserNameGoesHere", userName)
-                .Replace("PasswordGoesHere", password).Replace("ClientMachineGoesHere", clientMachine);
+            var fileContent = File.ReadAllText("FirewallInventory.json").Replace("UserNameGoesHere", UserName)
+                .Replace("PasswordGoesHere", Password).Replace("ClientMachineGoesHere", ClientMachine);
             var result =
                 JsonConvert.DeserializeObject<InventoryJobConfiguration>(fileContent);
             return result;
@@ -173,9 +173,9 @@ namespace CitrixAdcTestConsole
 
         public static InventoryJobConfiguration GetPanoramaInventoryJobConfiguration()
         {
-            var fileContent = File.ReadAllText("Inventory.json").Replace("UserNameGoesHere", userName)
-                .Replace("PasswordGoesHere", password).Replace("TemplateNameGoesHere", storePath)
-                .Replace("ClientMachineGoesHere", clientMachine);
+            var fileContent = File.ReadAllText("Inventory.json").Replace("UserNameGoesHere", UserName)
+                .Replace("PasswordGoesHere", Password).Replace("TemplateNameGoesHere", StorePath)
+                .Replace("ClientMachineGoesHere", ClientMachine);
             var result =
                 JsonConvert.DeserializeObject<InventoryJobConfiguration>(fileContent);
             return result;
@@ -185,20 +185,20 @@ namespace CitrixAdcTestConsole
         {
 
             var overWriteReplaceString = "\"Overwrite\": false";
-            if (overwrite.ToUpper() == "TRUE")
+            if (Overwrite.ToUpper() == "TRUE")
             {
                 overWriteReplaceString = "\"Overwrite\": true";
             }
 
-            var sniOverwriteString = $"\"sniCert\": \"{snicert}\"";
+            var sniOverwriteString = $"\"sniCert\": \"{Snicert}\"";
 
-            var fileContent = File.ReadAllText($"{fileName}.json").Replace("UserNameGoesHere", userName)
-                .Replace("PasswordGoesHere", password).Replace("TemplateNameGoesHere", storePath)
-                .Replace("AliasGoesHere", certAlias)
-                .Replace("ClientMachineGoesHere", clientMachine)
-                .Replace("virtualServerNameGoesHere", virtualServerName)
+            var fileContent = File.ReadAllText($"{fileName}.json").Replace("UserNameGoesHere", UserName)
+                .Replace("PasswordGoesHere", Password).Replace("TemplateNameGoesHere", StorePath)
+                .Replace("AliasGoesHere", CertAlias)
+                .Replace("ClientMachineGoesHere", ClientMachine)
+                .Replace("virtualServerNameGoesHere", VirtualServerName)
                 .Replace("\"Overwrite\": false", overWriteReplaceString)
-                .Replace("CertificateContentGoesHere", certificateContent)
+                .Replace("CertificateContentGoesHere", CertificateContent)
                 .Replace("\"sniCert\": \"false\"", sniOverwriteString);
             var result =
                 JsonConvert.DeserializeObject<ManagementJobConfiguration>(fileContent);
@@ -215,11 +215,11 @@ namespace CitrixAdcTestConsole
 
         public static ManagementJobConfiguration GetRemoveJobConfiguration()
         {
-            var fileContent = File.ReadAllText("ManagementRemove.json").Replace("UserNameGoesHere", userName)
-                .Replace("PasswordGoesHere", password).Replace("TemplateNameGoesHere", storePath)
-                .Replace("AliasGoesHere", certAlias)
-                .Replace("ClientMachineGoesHere", clientMachine)
-                .Replace("virtualServerNameGoesHere", virtualServerName);
+            var fileContent = File.ReadAllText("ManagementRemove.json").Replace("UserNameGoesHere", UserName)
+                .Replace("PasswordGoesHere", Password).Replace("TemplateNameGoesHere", StorePath)
+                .Replace("AliasGoesHere", CertAlias)
+                .Replace("ClientMachineGoesHere", ClientMachine)
+                .Replace("virtualServerNameGoesHere", VirtualServerName);
             var result =
                 JsonConvert.DeserializeObject<ManagementJobConfiguration>(fileContent);
             return result;
