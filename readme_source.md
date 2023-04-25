@@ -72,8 +72,8 @@ API Endpoint|Methods
 
 Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
 ----|------------------------|------------------------------------|--------------|----------------|-------------------------
-1	|Add Unbound Cert|**Alias:** TC1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Adds New Unbound Cert To Citrix ADC|True|![](Images/TC1.gif)
-2	|Remove Unbound Cert|**Alias:** TC1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Removes Unbound Cert From Citrix ADC|True|![](Images/TC2.gif)
+1	|Add Unbound Cert|**Alias:** TC1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Adds New Unbound Cert To Citrix ADC|True|![] (Images/TC1.gif)
+2	|Remove Unbound Cert|**Alias:** TC1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Removes Unbound Cert From Citrix ADC|True|![] (Images/TC2.gif)
 3	|Add Unbound Cert|**Alias:** TC3.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** false|Adds a new bound cert to TestVServer Virtual Server|True|![](Images/TC3.gif)
 4	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
 5	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
