@@ -1,4 +1,18 @@
-﻿using System;
+﻿// Copyright 2023 Keyfactor
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using System;
 using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
@@ -16,11 +30,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private readonly IPAMSecretResolver resolver;
 
-        private ILogger logger;
+        private ILogger _logger;
 
-        private string serverUserName { get; set; }
+        private string ServerUserName { get; set; }
 
-        private string serverPassword { get; set; }
+        private string ServerPassword { get; set; }
 
         public Management(IPAMSecretResolver resolver)
         {
@@ -31,29 +45,29 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private string ResolvePamField(string name, string value)
         {
-            logger.LogTrace($"Attempting to resolved PAM eligible field {name}");
+            _logger.LogTrace($"Attempting to resolved PAM eligible field {name}");
             return resolver.Resolve(value);
         }
 
         public JobResult ProcessJob(ManagementJobConfiguration jobConfiguration)
         {
-            logger = LogHandler.GetClassLogger<Management>();
+            _logger = LogHandler.GetClassLogger<Management>();
 
-            serverPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
-            serverUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
+            ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
+            ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
 
-            var store = new CitrixAdcStore(jobConfiguration, serverUserName, serverPassword);
+            var store = new CitrixAdcStore(jobConfiguration, ServerUserName, ServerPassword);
 
-            logger.LogDebug("Logging into Citrix...");
+            _logger.LogDebug("Logging into Citrix...");
             store.Login();
 
-            logger.LogDebug("Entering ProcessJob");
+            _logger.LogDebug("Entering ProcessJob");
             var result = ProcessJob(store, jobConfiguration);
 
-            logger.LogDebug("Logging out of Citrix...");
+            _logger.LogDebug("Logging out of Citrix...");
             store.Logout();
 
-            logger.LogDebug("Exiting ProcessJob");
+            _logger.LogDebug("Exiting ProcessJob");
 
             return result;
         }
@@ -61,7 +75,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
             string virtualServerName, bool overwrite,string sniCert)
         {
-            logger.LogTrace("Enter performAdd");
+            _logger.LogTrace("Enter performAdd");
             var alias = cert.Alias;
             AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias,sniCert);
         }
@@ -74,18 +88,18 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             var (pemFile, privateKeyFile) =
                 store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, alias, overwrite);
 
-            logger.LogDebug("Updating keyPair");
+            _logger.LogDebug("Updating keyPair");
             //update KeyPair
             keyPairName = store.UpdateKeyPair(alias, keyPairName, pemFile, privateKeyFile);
 
-            logger.LogDebug("Updating cert bindings");
+            _logger.LogDebug("Updating cert bindings");
             //update cert bindings
             store.UpdateBindings(keyPairName, virtualServerName,sniCert);
         }
 
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
         {
-            logger.LogTrace("Enter PerformDelete");
+            _logger.LogTrace("Enter PerformDelete");
             var sslKeyFile = store.GetKeyPairByName(cert.Alias);
 
             //1. Delete the Keypair
@@ -97,12 +111,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             //3. Remove directory from file name, Delete the Certificate File
             store.DeleteFile(Path.GetFileName(sslKeyFile.cert));
 
-            logger.LogTrace("Exit PerformDelete");
+            _logger.LogTrace("Exit PerformDelete");
         }
 
         private JobResult ProcessJob(CitrixAdcStore store, ManagementJobConfiguration jobConfiguration)
         {
-            logger.LogDebug("Begin Management...");
+            _logger.LogDebug("Begin Management...");
 
             try
             {
@@ -113,27 +127,27 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         var dup = store.IsDuplicateCertificate(jobConfiguration.JobCertificate.Alias);
                         if ((dup && jobConfiguration.Overwrite) || !dup || (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint")))
                         {
-                            logger.LogDebug("Begin Add...");
+                            _logger.LogDebug("Begin Add...");
                             var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
                             var sniCert =  (string)jobConfiguration.JobProperties["sniCert"];
 
                             //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
                             var keyPairName = jobConfiguration.JobCertificate.Alias;
 
-                            logger.LogTrace($"keyPairName: {keyPairName} virtualServerName {virtualServerName}");
+                            _logger.LogTrace($"keyPairName: {keyPairName} virtualServerName {virtualServerName}");
                             if (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint"))
                             {
                                 _thumbprint = jobConfiguration.JobProperties["RenewalThumbprint"].ToString();
-                                logger.LogDebug($"It's a renewal with thumbprint {_thumbprint}");
+                                _logger.LogDebug($"It's a renewal with thumbprint {_thumbprint}");
                             }
 
                             //if there is no thumbprint from Keyfactor then it is an Add, else it is a renewal
                             if (string.IsNullOrEmpty(_thumbprint))
                             {
-                                logger.LogDebug($"Begin Add/Enrollment... overwrite: {jobConfiguration.Overwrite}");
+                                _logger.LogDebug($"Begin Add/Enrollment... overwrite: {jobConfiguration.Overwrite}");
                                 PerformAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
                                     jobConfiguration.Overwrite, sniCert);
-                                logger.LogDebug("End Add/Enrollment...");
+                                _logger.LogDebug("End Add/Enrollment...");
                             }
                             else
                             {
@@ -141,13 +155,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                 //1. Get All Keys /config/sslcertkey store.ListKeyPairs()
                                 var keyPairList = store.ListKeyPairs();
 
-                                logger.LogTrace($"KeyPairList: {JsonConvert.SerializeObject(keyPairList)}");
+                                _logger.LogTrace($"KeyPairList: {JsonConvert.SerializeObject(keyPairList)}");
 
                                 //2. For Each check the binding /config/sslcertkey_binding store.GetBinding(strKey)
                                 foreach (var kp in keyPairList)
                                 {
                                     var binding = store.GetBinding(kp.certkey);
-                                    logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
+                                    _logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
                                     if (binding != null)
                                     {
                                         //4. Open the file and check the thumbprint
@@ -157,14 +171,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                         //5. If the Thumbprint matches the cert renewed from KF then PerformAdd With Overwrite 
                                         if (x?.Thumbprint == _thumbprint)
                                         {
-                                            logger.LogTrace($"Thumbprint Match: {_thumbprint}");
+                                            _logger.LogTrace($"Thumbprint Match: {_thumbprint}");
                                             foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
                                             {
-                                                logger.LogTrace(
+                                                _logger.LogTrace(
                                                     $"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
                                                 PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
                                                     sBinding.servername, true,sniCert);
-                                                logger.LogTrace(
+                                                _logger.LogTrace(
                                                     $"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
                                             }
                                         }
@@ -185,9 +199,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                         break;
                     case CertStoreOperationType.Remove:
-                        logger.LogDebug("Begin Delete...");
+                        _logger.LogDebug("Begin Delete...");
                         PerformDelete(store, jobConfiguration.JobCertificate);
-                        logger.LogDebug("End Delete...");
+                        _logger.LogDebug("End Delete...");
                         break;
                     case CertStoreOperationType.Create:
                         // The certificate store is the directory

@@ -1,4 +1,18 @@
-﻿using Keyfactor.Orchestrators.Extensions;
+﻿// Copyright 2023 Keyfactor
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using Keyfactor.Orchestrators.Extensions;
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
@@ -18,9 +32,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private readonly IPAMSecretResolver resolver;
 
-        private string serverUserName { get; set; }
+        private string ServerUserName { get; set; }
 
-        private string serverPassword { get; set; }
+        private string ServerPassword { get; set; }
 
         public Inventory(IPAMSecretResolver resolver)
         {
@@ -33,12 +47,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             _logger.LogDebug($"Client Machine: {jobConfiguration.CertificateStoreDetails.ClientMachine}");
             _logger.LogDebug($"UseSSL: {jobConfiguration.UseSSL}");
             _logger.LogDebug($"StorePath: {jobConfiguration.CertificateStoreDetails.StorePath}");
-            serverPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
-            serverUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
+            ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
+            ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
 
 
             _logger.LogDebug("Entering ProcessJob");
-            CitrixAdcStore store = new CitrixAdcStore(jobConfiguration,serverUserName,serverPassword);
+            CitrixAdcStore store = new CitrixAdcStore(jobConfiguration,ServerUserName,ServerPassword);
 
             _logger.LogDebug("Logging into Citrix...");
             store.Login();
@@ -97,12 +111,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                     Dictionary<string,object> parameters = new Dictionary<string, object>();
 
-                    var containsKeyWithPath = keyPairMap.ContainsKey(store.storePath + "/" + s);
+                    var containsKeyWithPath = keyPairMap.ContainsKey(store.StorePath + "/" + s);
                     var containsKey = keyPairMap.ContainsKey(s);
 
                     if (containsKey || containsKeyWithPath)
                     {
-                        var keyPairName = containsKeyWithPath ? keyPairMap[store.storePath + "/" + s] : keyPairMap[s];
+                        var keyPairName = containsKeyWithPath ? keyPairMap[store.StorePath + "/" + s] : keyPairMap[s];
 
                         _logger.LogDebug($"Found keyPairName: {keyPairName}");
                         parameters.Add("keyPairName", keyPairName);
