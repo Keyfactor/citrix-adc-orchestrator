@@ -607,7 +607,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 if (!string.IsNullOrWhiteSpace(pwd)) // PFX Entry
                 {
-                    Logger.LogTrace($"Has Password: {pwd}");
                     // Load PFX
                     var pfxBytes = Convert.FromBase64String(contents);
                     var (certPem, privateKey) = GetPemFromPfx(pfxBytes, pwd.ToCharArray());
