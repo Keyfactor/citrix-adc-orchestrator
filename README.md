@@ -33,6 +33,8 @@ ___
 
 **Netscaler Cert Store Type Setup**
 
+![](Images/CertStoreTypeSettings.gif)
+
 **Basic Settings:**
 
 CONFIG ELEMENT	| DESCRIPTION
@@ -78,6 +80,8 @@ Key Pair| When Enrolling, this is the name of the Certificate that will be insta
 
 **Netscaler Cert Store Setup**
 
+![](Images/CertStoreTypeSettings.gif)
+
 #### STORE CONFIG
 CONFIG ELEMENT	| DESCRIPTION
 ------------------|------------------
@@ -107,15 +111,15 @@ Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
 ----|------------------------|------------------------------------|--------------|----------------|-------------------------
 1	|Add Unbound Cert|**Alias:** TC1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Adds New Unbound Cert To Citrix ADC|True|![](Images/TC1.gif)
 2	|Remove Unbound Cert|**Alias:** TC1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Removes Unbound Cert From Citrix ADC|True|![](Images/TC2.gif)
-3	|Add Unbound Cert|**Alias:** TC3.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** false|Adds a new bound cert to TestVServer Virtual Server|True|![](Images/TC3.gif)
-4	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
-5	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
-6	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
-7	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
-8	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
-9	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
-10	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
-11	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
-12	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
-13	|Add Unbound Cert|**Alias:** TCN1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:**false|Adds New Unbound Cert To Citrix|True|![](images/TC1.gif)
+3	|Add Bound Cert|**Alias:** TC3.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** false|Adds a new bound cert to TestVServer Virtual Server|True|![](Images/TC3.gif)
+4	|Add Bound Cert Multiple VServers|**Alias:** TC4.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,false|Adds New Bound Cert To Both Servers in Citrix|True|![](images/TC4.gif)
+5	|Remove Bound Cert|**Alias:** TC4.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will Not Remove because it is bound.  Must Unbind it First|True|![](images/TC5.gif)
+6	|Renew Bound Cert|**Alias:** TC4.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Renews Bound Cert on Both VServers|True|![](images/TC6.gif)
+7	|Replace Bound Cert No Overwrite |**Alias:** TC4.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,false|Will Not replace, overwrite flag needed|True|![](images/TC7.gif)
+8	|Replace Bound Cert with Overwrite|**Alias:** 16934<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will do the replace because overwrite was used|True|![](images/TC8.gif)
+9	|Add Sni Cert and Bind|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** false|Will bind an additional SNI Cert to a VServer|True|![](images/TC9.gif)
+10	|Renew bound Sni Cert|**Alias:** TC10.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will Renew the Sni Cert Bound to the Site|True|![](images/TC10.gif)
+11	|Replace bound Sni Cert with Overwrite|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** true|Sni Cert Will Be Replaced and bound|True|![](images/TC11.gif)
+12	|Remove Bound Sni Cert|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will Not Remove because it is bound.  Must Unbind it First|True|![](images/TC12.gif)
+13	|Add Sni Cert To Multiple VServers and bind|**Alias:** TC13.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,true|Adds and binds Cert to TestVServer and adds and binds Sni Cert to TestVServer2|True|![](images/TC13.gif)
 
