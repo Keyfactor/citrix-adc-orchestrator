@@ -1,4 +1,5 @@
-**Netscaler Cert Store Type Setup**
+<details>
+  <summary>Cert Store Type Settings</summary>
 
 ![](Images/CertStoreTypeSettings.gif)
 
@@ -38,6 +39,7 @@ Parameter Name|Display Name|Parameter Type|Default Value|Required When
 virtualServerName|Virtual Server Name|String| |Leave All Unchecked
 sniCert|SNI Cert|String|false|Adding Entry
 
+</details>
 
 #### STORE TYPE ENTRY PARAMS
 CONFIG ELEMENT	| DESCRIPTION
