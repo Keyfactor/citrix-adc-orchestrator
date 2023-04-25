@@ -216,7 +216,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 Logger.LogDebug("Entering UploadCertificate() Method...");
                 var (pemFile, privateKeyFile) = GetPem(contents, pwd, alias);
-                Logger.LogTrace($"Contents: {contents} pwd: {pwd} alias: {alias} overwrite: {overwrite}");
 
                 Logger.LogTrace("Starting UploadFile(pemFile,overwrite) call");
                 //upload certificate
@@ -435,8 +434,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 Logger.LogDebug(
                     "Entering UpdateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey) Method...");
                 Logger.LogTrace($"alias: {alias} keyPairName: {keyPairName}");
-                Logger.LogTrace($"pemFile Content: {JsonConvert.SerializeObject(pemFile)}");
-                Logger.LogTrace($"privateKey Content: {JsonConvert.SerializeObject(privateKey)}");
 
                 var certPath = StorePath + "/" + keyPairName;
                 Logger.LogTrace($"certPath: {certPath}");
@@ -589,7 +586,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var certPem =
                     certStart + Pemify(Convert.ToBase64String(p.GetCertificate(alias).Certificate.GetEncoded())) +
                     certEnd;
-                Logger.LogTrace($"certPem: {certPem}");
                 Logger.LogDebug("Exiting GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)");
                 return (Encoding.ASCII.GetBytes(certPem), Encoding.ASCII.GetBytes(privateKeyString));
             }
@@ -624,8 +620,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         filelocation = StorePath
                     };
 
-                    Logger.LogTrace($"privateKeyFile Content: {JsonConvert.SerializeObject(privateKeyFile)}");
-
                     // set pem file from cert in pfx
                     pemFile.filecontent = Convert.ToBase64String(certPem);
                 }
@@ -636,7 +630,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 pemFile.filename = alias;
                 pemFile.filelocation = StorePath;
-                Logger.LogTrace($"pemFile Content: {JsonConvert.SerializeObject(pemFile)}");
                 Logger.LogDebug("Exiting GetPem(string contents, string pwd, string alias)");
 
                 return (pemFile, privateKeyFile);
@@ -704,7 +697,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     {
                         var keyFile = GetSystemFile(fileLocation + ".key");
                         keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
-                        Logger.LogTrace($"keyString: {keyString}");
                     }
                     catch (Exception e)
                     {
