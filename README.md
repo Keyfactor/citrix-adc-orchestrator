@@ -37,7 +37,7 @@ ___
 
 ![](Images/CertStoreTypeSettings.gif)
 
-**Basic Settings:**
+**Basic Settings**
 
 CONFIG ELEMENT	| DESCRIPTION
 ------------------|------------------
@@ -49,7 +49,7 @@ General Settings|Needs Server - Checked<br>Blueprint Allowed - Unchecked<br>Uses
 Requires Store Password	|Determines if a store password is required when configuring an individual store.  This must be unchecked.
 Supports Entry Password	|Determined if an individual entry within a store can have a password.  This must be unchecked.
 
-**Advanced Settings:**
+**Advanced Settings**
 
 CONFIG ELEMENT	| DESCRIPTION
 ------------------|------------------
@@ -58,7 +58,7 @@ Supports Custom Alias	|Determines if an individual entry within a store can have
 Private Keys	|This determines if Keyfactor can send the private key associated with a certificate to the store.  This is required since Citrix ADC will need the private key material to establish TLS connections.
 PFX Password Style	|This determines how the platform generate passwords to protect a PFX enrollment job that is delivered to the store.  This can be either Default (system generated) or Custom (user determined).
 
-**Custom Fields:**
+**Custom Fields**
 
 Parameter Name|Display Name|Parameter Type|Default Value|Required|Description
 ---|---|---|---|---|---
@@ -66,7 +66,7 @@ ServerUsername|Server Username|Secret||No|The username to log into the Server
 ServerPassword|Server Password|Secret||No|The password that matches the username to log into the Server
 ServerUseSsl|Use SSL|Bool|True|Yes|Determine whether the server uses SSL or not
 
-**Custom Fields:**
+**Custom Fields**
 
 Parameter Name|Display Name|Parameter Type|Default Value|Required When
 ---|---|---|---|---
@@ -82,7 +82,9 @@ Key Pair| When Enrolling, this is the name of the Certificate that will be insta
 
 </details>
 
-**Netscaler Cert Store Setup**
+<details>
+  <summary>Cert Store Setup</summary>
+<br />
 
 ![](Images/CertStoreTypeSettings.gif)
 
@@ -96,6 +98,7 @@ Password| This is the password that will be authenticated against the Netscaler 
 Use SSL| This should be set to True in Production when there is a valid certificate.
 Inventory Schedule| Set this for the appropriate inventory interval needed.
 
+</details>
 
 **Netscaler permissions needed**
 
