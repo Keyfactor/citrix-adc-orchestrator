@@ -33,7 +33,7 @@ ___
 
 <details>
   <summary>Cert Store Type Settings</summary>
-
+<br />
 ![](Images/CertStoreTypeSettings.gif)
 
 **Basic Settings:**
@@ -72,13 +72,14 @@ Parameter Name|Display Name|Parameter Type|Default Value|Required When
 virtualServerName|Virtual Server Name|String| |Leave All Unchecked
 sniCert|SNI Cert|String|false|Adding Entry
 
-</details>
 
 #### STORE TYPE ENTRY PARAMS
 CONFIG ELEMENT	| DESCRIPTION
 ------------------|------------------
 Virtual Server	| When Enrolling, this can be a single or comma separated list of VServers in Netscaler to replace.
 Key Pair| When Enrolling, this is the name of the Certificate that will be installed on Netscaler
+
+</details>
 
 **Netscaler Cert Store Setup**
 
