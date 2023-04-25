@@ -83,15 +83,19 @@ API Endpoint|Methods
 
 </details>
 
-**Integration Limitations**
+<details>
+  <summary>Integration Limitations</summary>
+<br />
 
-#### Limitation List
 
 * Direct PFX Binding Inventory
 	* In Netscaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in Netscaler is descibed in this [Netscaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
 
+</details>
 
-## Test Cases
+<details>
+  <summary>Test Cases</summary>
+<br />
 
 Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
 ----|------------------------|------------------------------------|--------------|----------------|-------------------------
@@ -108,3 +112,5 @@ Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
 11	|Replace bound Sni Cert with Overwrite|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** true|Sni Cert Will Be Replaced and bound|True|![](Images/TC11.gif)
 12	|Remove Bound Sni Cert|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will Not Remove because it is bound.  Must Unbind it First|True|![](Images/TC12.gif)
 13	|Add Sni Cert To Multiple VServers and bind|**Alias:** TC13.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,true|Adds and binds Cert to TestVServer and adds and binds Sni Cert to TestVServer2|True|![](Images/TC13.gif)
+
+</details>
