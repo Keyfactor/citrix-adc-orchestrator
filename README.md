@@ -100,7 +100,9 @@ Inventory Schedule| Set this for the appropriate inventory interval needed.
 
 </details>
 
-**Netscaler permissions needed**
+<details>
+  <summary>Permissions</summary>
+<br />
 
 The Netscaler user needs permission to perform the following API calls:
 
@@ -111,6 +113,8 @@ API Endpoint|Methods
 /nitro/v1/config/sslcertkey| get, update, add, delete
 /nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
 /nitro/v1/config/systemfile| get, add, delete
+
+</details>
 
 **Integration Limitations**
 
