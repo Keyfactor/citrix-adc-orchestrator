@@ -105,6 +105,14 @@ API Endpoint|Methods
 /nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
 /nitro/v1/config/systemfile| get, add, delete
 
+**Integration Limitations**
+
+#### Limitation List
+
+* Direct PFX Binding Inventory
+	* In Netscaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in Netscaler is descibed in this ![Netscaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
+
+
 ## Test Cases
 
 Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
