@@ -1,9 +1,9 @@
 @echo off
 
 cd C:\Users\bhill\source\repos\citrix-adc-orchestrator\CitrixAdcTestConsole\bin\Debug\netcoreapp3.1
-set Machine=52.255.196.18
-set ApiUser=bhill
-set ApiPassword=Keyfactor2019!
+set Machine=NetScalerBaseUrlMinusHttps
+set ApiUser=SomeNetScalerApiUser
+set ApiPassword=SomeNetScalerPassword
 
 
 echo ***********************************
