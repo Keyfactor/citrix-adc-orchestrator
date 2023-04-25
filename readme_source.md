@@ -1,6 +1,7 @@
 <details>
   <summary>Cert Store Type Settings</summary>
 <br />
+
 ![](Images/CertStoreTypeSettings.gif)
 
 **Basic Settings:**
