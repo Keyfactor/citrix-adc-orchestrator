@@ -676,7 +676,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 var b = Convert.FromBase64String(f.filecontent);
                 var fileString = Encoding.Default.GetString(b);
-                Logger.LogTrace($"fileString: {fileString}");
 
                 // Check if private key is included with certificate
                 var containsKey = fileString.IndexOf("-----BEGIN RSA PRIVATE KEY-----", StringComparison.Ordinal) >= 0;
