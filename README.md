@@ -130,6 +130,9 @@ API Endpoint|Methods
 * Down Time When Replacing Certs
 	* The orchestrator uses [Netscaler recommended methods](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/add-group-certs.html) to replace bound certs which creates a sub second blip of downtime.  There is currently no way around this if you want readable keypair names.
 
+* Renewals
+	* The renewal process will find the thumprint of the cert on all VServers and renew them in all places.  See test cases #6 and #10 in the Test Cases section.
+	
 </details>
 
 <details>
