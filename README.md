@@ -117,12 +117,18 @@ API Endpoint|Methods
 </details>
 
 <details>
-  <summary>Integration Limitations</summary>
+  <summary>Integration Notes and Limitations</summary>
 <br />
 
 
 * Direct PFX Binding Inventory
 	* In Netscaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in Netscaler is descibed in this [Netscaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
+
+* Sepcifiy Multiple VServers and Sni Flags
+	* When Binding to Multiple VServers and using Multiple SniFlags, you have to use a comma separated list of values as descibed in Test Case 13 in the Test Cases Section.  This will change in future version so each binding is a store in Keyfactor.
+
+* Down Time When Replacing Certs
+	* The orchestrator uses [Netscaler recommended methods](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/add-group-certs.html) to replace bound certs which creates a sub second blip of downtime.  There is currently no way around this if you want readable keypair names.
 
 </details>
 
