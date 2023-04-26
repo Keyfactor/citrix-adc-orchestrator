@@ -103,6 +103,18 @@ API Endpoint|Methods
 </details>
 
 <details>
+  <summary>Upgrade Procedures</summary>
+<br />
+
+
+* Upgrade From v1.0.2 to v2.0.0
+	* In the Keyfactor Command Database, run the following SQL Script to update the store types and store information [Upgrade Script](https://github.com/Keyfactor/citrix-adc-orchestrator/blob/snipamupdates/UpgradeScript.sql)
+
+	
+</details>
+
+
+<details>
   <summary>Test Cases</summary>
 <br />
 
