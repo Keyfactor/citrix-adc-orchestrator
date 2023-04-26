@@ -53,7 +53,7 @@ Key Pair| When Enrolling, this is the name of the Certificate that will be insta
   <summary>Cert Store Setup</summary>
 <br />
 
-![](Images/CertStoreTypeSettings.gif)
+![](Images/CertStore.gif)
 
 #### STORE CONFIG
 CONFIG ELEMENT	| DESCRIPTION
