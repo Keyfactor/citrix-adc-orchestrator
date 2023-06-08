@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="config.tt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Keyfactor.Common" Version="2.3.6" />
     <PackageReference Include="Keyfactor.Logging" Version="1.1.1" />
     <PackageReference Include="Keyfactor.Orchestrators.IOrchestratorJobExtensions" Version="0.7.0" />
@@ -26,4 +30,8 @@
       <HintPath>nitro.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="echo F | xcopy &quot;$(ProjectDir)config.json&quot; &quot;$(TargetDir)\config.json&quot; /Y" />
+  </Target>
 </Project>
