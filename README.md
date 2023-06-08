@@ -4,6 +4,7 @@ Orchestrator to manage certificates and keys on one to many VServers in Netscale
 
 #### Integration status: Production - Ready for use in production environments.
 
+
 ## About the Keyfactor Universal Orchestrator Extension
 
 This repository contains a Universal Orchestrator Extension which is a plugin to the Keyfactor Universal Orchestrator. Within the Keyfactor Platform, Orchestrators are used to manage “certificate stores” &mdash; collections of certificates and roots of trust that are found within and used by various applications.
@@ -14,16 +15,86 @@ The Universal Orchestrator is the successor to the Windows Orchestrator. This Or
 
 
 
+
 ## Support for Citrix Netscaler Universal Orchestrator
 
 Citrix Netscaler Universal Orchestrator is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative.
 
 ###### To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
-___
 
 
 
 ---
+
+
+
+
+## Keyfactor Version Supported
+
+The minimum version of the Keyfactor Universal Orchestrator Framework needed to run this version of the extension is 10.1
+
+## Platform Specific Notes
+
+The Keyfactor Universal Orchestrator may be installed on either Windows or Linux based platforms. The certificate operations supported by a capability may vary based what platform the capability is installed on. The table below indicates what capabilities are supported based on which platform the encompassing Universal Orchestrator is running.
+| Operation | Win | Linux |
+|-----|-----|------|
+|Supports Management Add|&check; |&check; |
+|Supports Management Remove|&check; |&check; |
+|Supports Create Store|  |  |
+|Supports Discovery|  |  |
+|Supports Renrollment|  |  |
+|Supports Inventory|&check; |&check; |
+
+
+## PAM Integration
+
+This orchestrator extension has the ability to connect to a variety of supported PAM providers to allow for the retrieval of various client hosted secrets right from the orchestrator server itself.  This eliminates the need to set up the PAM integration on Keyfactor Command which may be in an environment that the client does not want to have access to their PAM provider.
+
+The secrets that this orchestrator extension supports for use with a PAM Provider are:
+
+| Name           | Description                                                                                                                                                                                                                                                                                                                 |
+|----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Property | Value                                                                                                                                                                                                           |
+| Property | Value
+  
+
+It is not necessary to use a PAM Provider for all of the secrets available above. If a PAM Provider should not be used, simply enter in the actual value to be used, as normal.
+
+If a PAM Provider will be used for one of the fields above, start by referencing the [Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam). The GitHub repo for the PAM Provider to be used contains important information such as the format of the `json` needed. What follows is an example but does not reflect the `json` values for all PAM Providers as they have different "instance" and "initialization" parameter names and values.
+
+<details><summary>General PAM Provider Configuration</summary>
+<p>
+
+
+
+### Example PAM Provider Setup
+
+To use a PAM Provider to resolve a field, in this example the __Server Password__ will be resolved by the `Hashicorp-Vault` provider, first install the PAM Provider extension from the [Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam) on the Universal Orchestrator.
+
+Next, complete configuration of the PAM Provider on the UO by editing the `manifest.json` of the __PAM Provider__ (e.g. located at extensions/Hashicorp-Vault/manifest.json). The "initialization" parameters need to be entered here:
+
+~~~ json
+  "Keyfactor:PAMProviders:Hashicorp-Vault:InitializationInfo": {
+    "Host": "http://127.0.0.1:8200",
+    "Path": "v1/secret/data",
+    "Token": "xxxxxx"
+  }
+~~~
+
+After these values are entered, the Orchestrator needs to be restarted to pick up the configuration. Now the PAM Provider can be used on other Orchestrator Extensions.
+
+### Use the PAM Provider
+With the PAM Provider configured as an extenion on the UO, a `json` object can be passed instead of an actual value to resolve the field with a PAM Provider. Consult the [Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam) for the specific format of the `json` object.
+
+To have the __Server Password__ field resolved by the `Hashicorp-Vault` provider, the corresponding `json` object from the `Hashicorp-Vault` extension needs to be copied and filed in with the correct information:
+
+~~~ json
+{"Secret":"my-kv-secret","Key":"myServerPassword"}
+~~~
+
+This text would be entered in as the value for the __Server Password__, instead of entering in the actual password. The Orchestrator will attempt to use the PAM Provider to retrieve the __Server Password__. If PAM should not be used, just directly enter in the value for the field.
+</p>
+</details> 
 
 
 
@@ -86,7 +157,7 @@ Key Pair| When Enrolling, this is the name of the Certificate that will be insta
   <summary>Cert Store Setup</summary>
 <br />
 
-![](Images/CertStoreTypeSettings.gif)
+![](Images/CertStore.gif)
 
 #### STORE CONFIG
 CONFIG ELEMENT	| DESCRIPTION
@@ -136,6 +207,18 @@ API Endpoint|Methods
 </details>
 
 <details>
+  <summary>Upgrade Procedures</summary>
+<br />
+
+
+* Upgrade From v1.0.2 to v2.0.0
+	* In the Keyfactor Command Database, run the following SQL Script to update the store types and store information [Upgrade Script](https://github.com/Keyfactor/citrix-adc-orchestrator/blob/snipamupdates/UpgradeScript.sql)
+
+	
+</details>
+
+
+<details>
   <summary>Test Cases</summary>
 <br />
 
@@ -154,6 +237,7 @@ Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
 11	|Replace bound Sni Cert with Overwrite|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** true|Sni Cert Will Be Replaced and bound|True|![](Images/TC11.gif)
 12	|Remove Bound Sni Cert|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will Not Remove because it is bound.  Must Unbind it First|True|![](Images/TC12.gif)
 13	|Add Sni Cert To Multiple VServers and bind|**Alias:** TC13.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,true|Adds and binds Cert to TestVServer and adds and binds Sni Cert to TestVServer2|True|![](Images/TC13.gif)
+14	|Inventory |No Params|Will Perform Inventory and pull down all Certs Tied to VServers|True|![](Images/TC14.gif)
 
 </details>
 
