@@ -31,23 +31,48 @@ ___
 ---
 
 
-**Netscaler Cert Store Type Setup**
+<details>
+  <summary>Cert Store Type Settings</summary>
+<br />
 
-*1. Cert Store Type Basic Settings*
+![](Images/CertStoreTypeSettings.gif)
 
-![](Images/CertStoreType-Basic.gif)
+**Basic Settings**
 
-*2. Cert Store Type Advanced Settings*
-![](Images/CertStoreType-Advanced.gif)
+CONFIG ELEMENT	| DESCRIPTION
+------------------|------------------
+Name	|A descriptive name for the extension.  Example:  CitrixAdc
+Short Name	|The short name that identifies the registered functionality of the orchestrator. Must be CitrixAdc.
+Custom Capability|Store type name orchestrator will register with. Uncheck This
+Job Types	|Inventory (Checked), check the additional checkboxes: Add, Remove
+General Settings|Needs Server - Checked<br>Blueprint Allowed - Unchecked<br>Uses PowerShell - Unchecked
+Requires Store Password	|Determines if a store password is required when configuring an individual store.  This must be unchecked.
+Supports Entry Password	|Determined if an individual entry within a store can have a password.  This must be unchecked.
 
-*3. Cert Store Type Custom Fields*
-![](Images/CertStoreType-CustomFields.gif)
+**Advanced Settings**
 
-*4. Cert Store Type Entry Params - Virtual Server*
-![](Images/CertStoreType-VServerEntry.gif)
+CONFIG ELEMENT	| DESCRIPTION
+------------------|------------------
+Store Path Type	|Determines what restrictions are applied to the store path field when configuring a new store.  Select Freeform
+Supports Custom Alias	|Determines if an individual entry within a store can have a custom Alias.  This must be Required.
+Private Keys	|This determines if Keyfactor can send the private key associated with a certificate to the store.  This is required since Citrix ADC will need the private key material to establish TLS connections.
+PFX Password Style	|This determines how the platform generate passwords to protect a PFX enrollment job that is delivered to the store.  This can be either Default (system generated) or Custom (user determined).
 
-*5. Cert Store Type Entry Params - KPEntry*
-![](Images/CertStoreType-KPEntry.gif)
+**Custom Fields**
+
+Parameter Name|Display Name|Parameter Type|Default Value|Required|Description
+---|---|---|---|---|---
+ServerUsername|Server Username|Secret||No|The username to log into the Server
+ServerPassword|Server Password|Secret||No|The password that matches the username to log into the Server
+ServerUseSsl|Use SSL|Bool|True|Yes|Determine whether the server uses SSL or not
+
+**Custom Fields**
+
+Parameter Name|Display Name|Parameter Type|Default Value|Required When
+---|---|---|---|---
+virtualServerName|Virtual Server Name|String| |Leave All Unchecked
+sniCert|SNI Cert|String|false|Adding Entry
+
 
 #### STORE TYPE ENTRY PARAMS
 CONFIG ELEMENT	| DESCRIPTION
@@ -55,25 +80,29 @@ CONFIG ELEMENT	| DESCRIPTION
 Virtual Server	| When Enrolling, this can be a single or comma separated list of VServers in Netscaler to replace.
 Key Pair| When Enrolling, this is the name of the Certificate that will be installed on Netscaler
 
-**Netscaler Cert Store Setup**
+</details>
 
-*1. Cert Store Base Settings*
+<details>
+  <summary>Cert Store Setup</summary>
+<br />
 
-![](Images/CertStore-Base.gif)
-
-*2. Cert Store Credential Setup*
-
-![](Images/CertStore-Credentials.gif)
+![](Images/CertStoreTypeSettings.gif)
 
 #### STORE CONFIG
 CONFIG ELEMENT	| DESCRIPTION
 ------------------|------------------
 Client Machine	| This is the IP Address of the Netscaler Appliance.
-Store Path| This is the path of the Netscaler Appliance.  The value shown in the screenshot is the default path.
+Store Path| This is the path of the Netscaler Appliance.  /nsconfig/ssl/.
 User| This is the user that will be authenticated against the Netscaler Appliance
 Password| This is the password that will be authenticated against the Netscaler Appliance
+Use SSL| This should be set to True in Production when there is a valid certificate.
+Inventory Schedule| Set this for the appropriate inventory interval needed.
 
-**Netscaler permissions needed**
+</details>
+
+<details>
+  <summary>Permissions</summary>
+<br />
 
 The Netscaler user needs permission to perform the following API calls:
 
@@ -85,32 +114,46 @@ API Endpoint|Methods
 /nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
 /nitro/v1/config/systemfile| get, add, delete
 
-**Enrollment Multiple Virtual Servers**
+</details>
 
-This will enroll the certificate and bind it to multiple VServers.  If you just want one VServer then include that one Server without commas.
+<details>
+  <summary>Integration Notes and Limitations</summary>
+<br />
 
-*1. Comma Separate the VServers*
 
-![](Images/EnrollMultipleVServers.gif)
+* Direct PFX Binding Inventory
+	* In Netscaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in Netscaler is descibed in this [Netscaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
 
-![](Images/EnrollMultipleServersNetscaler.gif)
+* Sepcifiy Multiple VServers and Sni Flags
+	* When Binding to Multiple VServers and using Multiple SniFlags, you have to use a comma separated list of values as descibed in Test Case 13 in the Test Cases Section.  This will change in future version so each binding is a store in Keyfactor.
 
-**Renewal**
+* Down Time When Replacing Certs
+	* The orchestrator uses [Netscaler recommended methods](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/add-group-certs.html) to replace bound certs which creates a sub second blip of downtime.  There is currently no way around this if you want readable keypair names.
 
-This will renew the certificate and update all of the VServer Bindings on Netscaler that have that same thumbprint.
+* Renewals
+	* The renewal process will find the thumprint of the cert on all VServers and renew them in all places.  See test cases #6 and #10 in the Test Cases section.
+	
+</details>
 
-![](Images/Renewal.gif)
+<details>
+  <summary>Test Cases</summary>
+<br />
 
-**Inventory**
+Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
+----|------------------------|------------------------------------|--------------|----------------|-------------------------
+1	|Add Unbound Cert|**Alias:** TC1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Adds New Unbound Cert To Citrix ADC|True|![](Images/TC1.gif)
+2	|Remove Unbound Cert|**Alias:** TC1.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Removes Unbound Cert From Citrix ADC|True|![](Images/TC2.gif)
+3	|Add Bound Cert|**Alias:** TC3.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** false|Adds a new bound cert to TestVServer Virtual Server|True|![](Images/TC3.gif)
+4	|Add Bound Cert Multiple VServers|**Alias:** TC4.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,false|Adds New Bound Cert To Both Servers in Citrix|True|![](Images/TC4.gif)
+5	|Remove Bound Cert|**Alias:** TC4.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will Not Remove because it is bound.  Must Unbind it First|True|![](Images/TC5.gif)
+6	|Renew Bound Cert|**Alias:** TC4.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Renews Bound Cert on Both VServers|True|![](Images/TC6.gif)
+7	|Replace Bound Cert No Overwrite |**Alias:** TC4.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,false|Will Not replace, overwrite flag needed|True|![](Images/TC7.gif)
+8	|Replace Bound Cert with Overwrite|**Alias:** 16934<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will do the replace because overwrite was used|True|![](Images/TC8.gif)
+9	|Add Sni Cert and Bind|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** false|Will bind an additional SNI Cert to a VServer|True|![](Images/TC9.gif)
+10	|Renew bound Sni Cert|**Alias:** TC10.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will Renew the Sni Cert Bound to the Site|True|![](Images/TC10.gif)
+11	|Replace bound Sni Cert with Overwrite|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:** TestVServer<br/>**Sni Cert:** true|Sni Cert Will Be Replaced and bound|True|![](Images/TC11.gif)
+12	|Remove Bound Sni Cert|**Alias:** TC9.boingy.com<br/>**Virtual Server Name:**<br/>**Sni Cert:** false|Will Not Remove because it is bound.  Must Unbind it First|True|![](Images/TC12.gif)
+13	|Add Sni Cert To Multiple VServers and bind|**Alias:** TC13.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,true|Adds and binds Cert to TestVServer and adds and binds Sni Cert to TestVServer2|True|![](Images/TC13.gif)
 
-This will inventory the certs on the Netscaler appliance and also update the entry parameters back into Keyfactor.
-
-![](Images/Inventory.gif)
-
-**Remove From Store**
-
-This will remove it from the store on Keyfactor and deleted the associated certificate file on Netscaler.  It will leave the Key Pair and Key on Netscaler.
-You should not need to specify a VServer or KPair for removal.  This can be setup in the configuration of Keyfactor to not be needed for removal.
-
-![](Images/Remove.gif)
+</details>
 
