@@ -52,7 +52,11 @@ This orchestrator extension has the ability to connect to a variety of supported
 
 The secrets that this orchestrator extension supports for use with a PAM Provider are:
 
-
+|Name|Description|
+|----|-----------|
+|ServerUsername|The user id that will be used to authenticate into the server hosting the store|
+|ServerPassword|The password that will be used to authenticate into the server hosting the store|
+|StorePassword|The optional password used to secure the certificate store being managed|
 
 It is not necessary to use a PAM Provider for all of the secrets available above. If a PAM Provider should not be used, simply enter in the actual value to be used, as normal.
 
