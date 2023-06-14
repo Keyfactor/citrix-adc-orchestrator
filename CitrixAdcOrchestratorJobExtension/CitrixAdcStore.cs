@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Xml.Linq;
 using com.citrix.netscaler.nitro.exception;
 using com.citrix.netscaler.nitro.resource.Base;
 using com.citrix.netscaler.nitro.resource.config.ssl;
@@ -838,7 +839,16 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public void SaveConfiguration()
         {
-            _nss.save_config();
+            try
+            {
+                Logger.LogDebug("Entering and Exiting SaveConfiguration Method...");
+                _ = _nss.save_config();
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error in SaveConfiguration: {LogHandler.FlattenException(e)}");
+                throw;
+            }
         }
     }
 }
