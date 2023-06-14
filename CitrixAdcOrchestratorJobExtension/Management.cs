@@ -56,6 +56,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
             ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
 
+            ApplicationSettings.Initialize(this.GetType().Assembly.Location);
+
             var store = new CitrixAdcStore(jobConfiguration, ServerUserName, ServerPassword);
 
             _logger.LogDebug("Logging into Citrix...");
@@ -63,6 +65,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             _logger.LogDebug("Entering ProcessJob");
             var result = ProcessJob(store, jobConfiguration);
+
+            if (ApplicationSettings.AutoSaveConfig && result.Result == OrchestratorJobStatusJobResult.Success)
+            {
+                _logger.LogDebug("Saving configuration...");
+                store.SaveConfiguration();
+            }
 
             _logger.LogDebug("Logging out of Citrix...");
             store.Logout();
