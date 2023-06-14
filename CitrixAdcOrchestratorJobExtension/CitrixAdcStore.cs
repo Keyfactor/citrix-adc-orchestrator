@@ -835,5 +835,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 return false;
             }
         }
+
+        public void SaveConfiguration()
+        {
+            _nss.save_config();
+        }
     }
 }

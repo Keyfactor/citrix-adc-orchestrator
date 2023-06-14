@@ -52,11 +52,11 @@ This orchestrator extension has the ability to connect to a variety of supported
 
 The secrets that this orchestrator extension supports for use with a PAM Provider are:
 
-| Name           | Description                                                                                                                                                                                                                                                                                                                 |
-|----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Property | Value                                                                                                                                                                                                           |
-| Property | Value
-  
+|Name|Description|
+|----|-----------|
+|ServerUsername|The user id that will be used to authenticate into the server hosting the store|
+|ServerPassword|The password that will be used to authenticate into the server hosting the store|
+|StorePassword|The optional password used to secure the certificate store being managed|
 
 It is not necessary to use a PAM Provider for all of the secrets available above. If a PAM Provider should not be used, simply enter in the actual value to be used, as normal.
 
@@ -204,6 +204,11 @@ API Endpoint|Methods
 * Renewals
 	* The renewal process will find the thumprint of the cert on all VServers and renew them in all places.  See test cases #6 and #10 in the Test Cases section.
 	
+* AutoSave Config
+	* A new config.json file in the extension folder contains the 'AutoSaveConfig' flag with a default value of 'N'.  When this flag is set to 'Y', successful configuration changes made by a management job will be automatically saved to disk; no interaction with the Citrix ADC UI is necessary.
+	
+	**NOTE:** Any changes in-process through the Citrix ADC UI will also be persisted to disk when a management job is performed and the AutoSaveConfig flag is set to 'Y'.
+
 </details>
 
 <details>

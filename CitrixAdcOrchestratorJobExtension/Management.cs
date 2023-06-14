@@ -80,8 +80,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias,sniCert);
         }
 
-
-
         private void AddBindCert(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
             string virtualServerName, bool overwrite, string alias,string sniCert)
         {
