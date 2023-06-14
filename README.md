@@ -52,11 +52,12 @@ This orchestrator extension has the ability to connect to a variety of supported
 
 The secrets that this orchestrator extension supports for use with a PAM Provider are:
 
-| Name           | Description                                                                                                                                                                                                                                                                                                                 |
-|----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Property | Value                                                                                                                                                                                                           |
-| Property | Value
-  
+|Name|Description|
+|----|-----------|
+|ServerUsername|The user id that will be used to authenticate into the server hosting the store|
+|ServerPassword|The password that will be used to authenticate into the server hosting the store|
+|StorePassword|The optional password used to secure the certificate store being managed|
+
 It is not necessary to use a PAM Provider for all of the secrets available above. If a PAM Provider should not be used, simply enter in the actual value to be used, as normal.
 
 If a PAM Provider will be used for one of the fields above, start by referencing the [Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam). The GitHub repo for the PAM Provider to be used contains important information such as the format of the `json` needed. What follows is an example but does not reflect the `json` values for all PAM Providers as they have different "instance" and "initialization" parameter names and values.
@@ -108,18 +109,6 @@ This text would be entered in as the value for the __Server Password__, instead 
 ![](Images/CertStoreTypeSettings.gif)
 
 **Basic Settings**
-
-CONFIG ELEMENT	| DESCRIPTION
-------------------|------------------
-Name	|A descriptive name for the extension.  Example:  CitrixAdc
-Short Name	|The short name that identifies the registered functionality of the orchestrator. Must be CitrixAdc.
-Custom Capability|Store type name orchestrator will register with. Uncheck This
-Job Types	|Inventory (Checked), check the additional checkboxes: Add, Remove
-General Settings|Needs Server - Checked<br>Blueprint Allowed - Unchecked<br>Uses PowerShell - Unchecked
-Requires Store Password	|Determines if a store password is required when configuring an individual store.  This must be unchecked.
-Supports Entry Password	|Determined if an individual entry within a store can have a password.  This must be unchecked.
-
-**Advanced Settings**
 
 CONFIG ELEMENT	| DESCRIPTION
 ------------------|------------------
@@ -201,6 +190,7 @@ API Endpoint|Methods
 <details>
   <summary>Integration Notes and Limitations</summary>
 <br />
+
 
 * Direct PFX Binding Inventory
 	* In Netscaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in Netscaler is descibed in this [Netscaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
