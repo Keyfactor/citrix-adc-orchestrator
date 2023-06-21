@@ -164,7 +164,7 @@ namespace CitrixAdcTestConsole
 
         public static InventoryJobConfiguration GetInventoryJobConfiguration()
         {
-            var fileContent = File.ReadAllText("FirewallInventory.json").Replace("UserNameGoesHere", UserName)
+            var fileContent = File.ReadAllText("Inventory.json").Replace("UserNameGoesHere", UserName)
                 .Replace("PasswordGoesHere", Password).Replace("ClientMachineGoesHere", ClientMachine);
             var result =
                 JsonConvert.DeserializeObject<InventoryJobConfiguration>(fileContent);

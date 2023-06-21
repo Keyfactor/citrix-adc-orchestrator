@@ -663,6 +663,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 return null;
             }
 
+            //Ignore Directories
+            if (f.filemode!=null && f.filemode[0].ToUpper() == "DIRECTORY")
+            {
+                hasKey = false;
+                return null;
+            }
+
             // Determine if it's a cert
             X509Certificate2 x = null;
             try
@@ -695,7 +702,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     // check .key file
                     try
                     {
-                        var keyFile = GetSystemFile(fileLocation + ".key");
+                        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
+                        var keyFile = GetSystemFile(fileNameWithoutExtension + ".key");
                         keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
                     }
                     catch (Exception e)

@@ -126,17 +126,25 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         var vserverBindings = binding?.sslcertkey_sslvserver_binding;
                         if (vserverBindings != null)
                         {
-                            var virtualServerName = String.Join(",", vserverBindings.Select(p => p.servername));
-                            _logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
-                            parameters.Add("virtualServerName", virtualServerName);
-                            string bindingsCsv = string.Empty;
-                            foreach (string server in virtualServerName.Split(','))
+                            try
                             {
-                                var bindings = store.GetBindingByVServer(server);
-                                var first = bindings.FirstOrDefault(b => b.certkeyname == keyPairName);
-                                if (first != null) bindingsCsv += first.snicert + ",";
+                                var virtualServerName = String.Join(",", vserverBindings.Select(p => p.servername));
+                                _logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
+                                parameters.Add("virtualServerName", virtualServerName);
+                                string bindingsCsv = string.Empty;
+                                foreach (string server in virtualServerName.Split(','))
+                                {
+                                    var bindings = store.GetBindingByVServer(server);
+                                    var first = bindings.FirstOrDefault(b => b.certkeyname == keyPairName);
+                                    if (first != null) bindingsCsv += first.snicert + ",";
+                                }
+                                parameters.Add("sniCert", bindingsCsv.TrimEnd(','));
                             }
-                            parameters.Add("sniCert", bindingsCsv.TrimEnd(','));
+                            catch (Exception e)
+                            {
+                                _logger.LogError($"Error handling SNI or VServerBindings {LogHandler.FlattenException(e)}");
+                            }
+
                         }
                     }
 

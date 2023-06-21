@@ -2,7 +2,7 @@
   "LastInventory": [],
   "CertificateStoreDetails": {
     "ClientMachine": "ClientMachineGoesHere",
-    "StorePath": "/",
+    "StorePath": "/nsconfig/ssl/",
     "StorePassword": "",
     "Properties": "{\"ServerUsername\":\"UserNameGoesHere\",\"ServerPassword\":\"PasswordGoesHere\",\"ServerUseSsl\":\"true\",\"DeviceGroup\":\"\"}",
     "Type": 105
