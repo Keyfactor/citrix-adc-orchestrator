@@ -15,6 +15,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public static bool AutoSaveConfig { get { return configuration.ContainsKey("AutoSaveConfig") ? configuration["AutoSaveConfig"]?.ToUpper() == "Y" : false; } }
 
+        public static bool RenewAll { get { return configuration.ContainsKey("RenewAll") ? configuration["RenewAll"]?.ToUpper() == "Y" : false; } }
+
         public static void Initialize(string configLocation)
         {
             ILogger logger = LogHandler.GetClassLogger<ApplicationSettings>();

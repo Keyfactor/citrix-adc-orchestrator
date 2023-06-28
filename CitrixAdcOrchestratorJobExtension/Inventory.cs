@@ -76,7 +76,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private JobResult ProcessJob(CitrixAdcStore store, InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
         {
-            _logger.LogDebug("Begin Inventory...");
+            _logger.LogDebug("Begin New Bindings Fix Inventory...");
             
             List<CurrentInventoryItem> inventory = new List<CurrentInventoryItem>();
 
