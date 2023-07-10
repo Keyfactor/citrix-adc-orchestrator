@@ -1,3 +1,6 @@
+2.0.1
+* Fixed Issue with Inventory when VServer Cannot be retreived by Citrix API
+
 2.0.0
 * Added AutoSave Configuration (default set to false)
 * Added PAM Support
