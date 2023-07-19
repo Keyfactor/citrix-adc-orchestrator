@@ -160,7 +160,7 @@ API Endpoint|Methods
 **Basic Settings**
 
 CONFIG ELEMENT	| VALUE | DESCRIPTION
-------------------|------------------
+------------------|-------|-----------
 Name  |Citrix ADC	|A descriptive name for the extension.  Example:  CitrixAdc
 Short Name|CitrixADC|The short name that identifies the registered functionality of the orchestrator. Must be CitrixAdc.
 Custom Capability|Unchecked|Store type name orchestrator will register with.
@@ -174,7 +174,7 @@ Supports Entry Password|Unchecked |Determined if an individual entry within a st
 **Advanced Settings**
 
 CONFIG ELEMENT	| VALUE | DESCRIPTION
-------------------|------------------
+------------------|--------|----------
 Store Path Type	|Freeform	|Determines what restrictions are applied to the store path field when configuring a new store.
 Supports Custom	Alias		|Required	|Determines if an individual entry within a store can have a custom Alias.
 Private Keys	|Required	|This determines if Keyfactor can send the private key associated with a certificate to the store.  This is required since Citrix ADC will need the private key material to establish TLS connections.
