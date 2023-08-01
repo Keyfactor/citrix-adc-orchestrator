@@ -351,6 +351,35 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
+        public sslcertkey[] FindCertKeyByCertLocation(string certLocation,string storePath)
+        {
+            try
+            {
+                Logger.LogDebug("Entering FindCertKeyByCertLocation(string certPath) Method...");
+                Logger.LogTrace($"certLocation: {certLocation}");
+                var filters = new filtervalue[1];
+                filters[0] = new filtervalue("cert", certLocation);
+                var filteredResults = sslcertkey.get_filtered(_nss, filters);
+                
+                //First try without the path if null try with path, citrix sends multiple ways depending how the cert is installed
+                if(filteredResults==null)
+                {
+                    filters[0] = new filtervalue("cert", storePath + certLocation);
+                    filteredResults = sslcertkey.get_filtered(_nss, filters);
+                }
+
+                Logger.LogTrace($"filteredResults: {JsonConvert.SerializeObject(filteredResults)}");
+                Logger.LogDebug("Exiting FindCertKeyByCertLocation(string certPath) Method...");
+                return filteredResults;
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(
+                    $"Error Occurred in FindKeyPairByCertPath(string certPath): {LogHandler.FlattenException(e)}");
+                throw;
+            }
+        }
+
         private string UpdateKeyPair(string keyPairName, string certPath, string keyPath)
         {
             try
@@ -642,7 +671,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public X509Certificate2 GetX509Certificate(string fileLocation, out bool hasKey)
+        public X509Certificate2 GetX509Certificate(string fileLocation,out bool hasKey)
         {
             Logger.LogDebug("Entering GetX509Certificate(string fileLocation, out bool hasKey)");
             systemfile f;
@@ -702,9 +731,15 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     // check .key file
                     try
                     {
-                        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
-                        var keyFile = GetSystemFile(fileNameWithoutExtension + ".key");
-                        keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
+                        keyString = string.Empty;
+
+                        var binding = FindCertKeyByCertLocation(fileLocation,StorePath);
+                        if (binding != null)
+                        {
+                            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
+                            var keyFile = GetSystemFile(binding[0].key);
+                            keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
+                        }
                     }
                     catch (Exception e)
                     {
@@ -755,7 +790,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 //option.set_args($"filelocation:{urlPath},filename:{fileName}");
                 option.filelocation = StorePath;
-                var f = new systemfile {filelocation = StorePath, filename = fileName};
+                var f = new systemfile {filelocation = StorePath, filename = Path.GetFileName(fileName)};
                 var result = systemfile.get(_nss, f);
                 Logger.LogDebug("Exiting GetSystemFile(string fileName)");
                 return result;

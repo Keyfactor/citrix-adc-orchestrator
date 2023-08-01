@@ -111,19 +111,22 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                     Dictionary<string,object> parameters = new Dictionary<string, object>();
 
-                    var containsKeyWithPath = keyPairMap.ContainsKey(store.StorePath + "/" + s);
+                    var pathName = store.StorePath + "/" + s;
+                    var containsKeyWithPath = keyPairMap.ContainsKey(pathName);
+                    if (containsKeyWithPath == false)
+                        pathName = store.StorePath  + s;
+                    containsKeyWithPath = keyPairMap.ContainsKey(pathName);
                     var containsKey = keyPairMap.ContainsKey(s);
 
                     if (containsKey || containsKeyWithPath)
                     {
-                        var keyPairName = containsKeyWithPath ? keyPairMap[store.StorePath + "/" + s] : keyPairMap[s];
+                        var keyPairName = containsKeyWithPath ? keyPairMap[pathName] : keyPairMap[s];
 
                         _logger.LogDebug($"Found keyPairName: {keyPairName}");
-                        parameters.Add("keyPairName", keyPairName);
 
                         var binding = store.GetBinding(keyPairName);
 
-                        var vserverBindings = binding?.sslcertkey_sslvserver_binding;
+                        var vserverBindings = binding?.sslcertkey_sslvserver_binding.Distinct();
                         if (vserverBindings != null)
                         {
                             try
@@ -148,11 +151,18 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         }
                     }
 
+                    var aliasName = s;
+                    var sslCertKey = store.FindCertKeyByCertLocation(s, pathName);
+                    if(sslCertKey != null  && sslCertKey.Length==1)
+                    {
+                        aliasName = sslCertKey[0].certkey;
+                    }
+                    
                     inventory.Add(new CurrentInventoryItem()
                     {
-                        Alias = s,
+                        Alias = aliasName,
                         Certificates = new[] { Convert.ToBase64String(x.GetRawCertData()) },
-                        //ItemStatus = itemStatus,
+                        ItemStatus = Orchestrators.Common.Enums.OrchestratorInventoryItemStatus.Unknown,
                         PrivateKeyEntry = privateKeyEntry,
                         UseChainLevel = false,
                         Parameters = parameters
