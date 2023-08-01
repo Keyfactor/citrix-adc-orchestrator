@@ -189,7 +189,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             var binding = store.GetBinding(keyPairName);
 
-            var vserverBindings = binding?.sslcertkey_sslvserver_binding.Distinct();
+            var vserverBindings = binding?.sslcertkey_sslvserver_binding?.Distinct();
             if (vserverBindings == null) return parameters;
             try
             {
