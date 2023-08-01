@@ -367,6 +367,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     filteredResults = sslcertkey.get_filtered(nss, filters);
                 }
 
+                if (filteredResults == null)
+                {
+                    filters[0] = new filtervalue("cert", path + "/" + certLocation);
+                    filteredResults = sslcertkey.get_filtered(nss, filters);
+                }
+
                 logger.LogTrace($"filteredResults: {JsonConvert.SerializeObject(filteredResults)}");
                 logger.LogDebug("Exiting FindCertKeyByCertLocation(string certPath) Method...");
                 return filteredResults;
