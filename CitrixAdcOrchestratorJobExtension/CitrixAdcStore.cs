@@ -17,7 +17,6 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Xml.Linq;
 using com.citrix.netscaler.nitro.exception;
 using com.citrix.netscaler.nitro.resource.Base;
 using com.citrix.netscaler.nitro.resource.config.ssl;
@@ -45,38 +44,38 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         private readonly string _clientMachine;
 
         private readonly systemfile_args nitroServiceOptions;
-        private readonly string _password;
+        private readonly string password;
 
-        public readonly string StorePath;
-        private readonly string _username;
-        private readonly bool _useSsl;
+        public readonly string storePath;
+        private readonly string username;
+        private readonly bool useSsl;
 
-        private nitro_service _nss;
+        private nitro_service nss;
 
         public CitrixAdcStore(InventoryJobConfiguration config, string serverUserName, string serverPassword)
         {
             try
             {
-                Logger = LogHandler.GetClassLogger<CitrixAdcStore>();
-                Logger.LogDebug(
+                logger = LogHandler.GetClassLogger<CitrixAdcStore>();
+                logger.LogDebug(
                     "Begin CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config) Constructor...");
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
-                StorePath = config.CertificateStoreDetails.StorePath;
+                storePath = config.CertificateStoreDetails.StorePath;
                 var o = new systemfile_args();
-                _useSsl = config.UseSSL;
-                _username = serverUserName;
-                _password = serverPassword;
+                useSsl = config.UseSSL;
+                username = serverUserName;
+                password = serverPassword;
 
-                Logger.LogTrace($"Store Path: {StorePath}");
-                o.filelocation = StorePath;
+                logger.LogTrace($"Store Path: {storePath}");
+                o.filelocation = storePath;
                 nitroServiceOptions = o;
 
-                Logger.LogDebug(
+                logger.LogDebug(
                     "Exit CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config) Constructor...");
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occured in CitrixAdcStore(InventoryJobConfiguration config) : this((JobConfiguration) config): {LogHandler.FlattenException(e)}");
                 throw;
             }
@@ -86,71 +85,71 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger = LogHandler.GetClassLogger<CitrixAdcStore>();
-                Logger.LogDebug(
+                logger = LogHandler.GetClassLogger<CitrixAdcStore>();
+                logger.LogDebug(
                     "Begin CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config) Constructor...");
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
-                StorePath = config.CertificateStoreDetails.StorePath;
-                _useSsl = config.UseSSL;
-                _username = serverUserName;
-                _password = serverPassword;
+                storePath = config.CertificateStoreDetails.StorePath;
+                useSsl = config.UseSSL;
+                username = serverUserName;
+                password = serverPassword;
                 var o = new systemfile_args();
 
-                Logger.LogTrace($"UrlPath: {StorePath}");
-                o.filelocation = StorePath;
+                logger.LogTrace($"UrlPath: {storePath}");
+                o.filelocation = storePath;
 
                 nitroServiceOptions = o;
-                Logger.LogDebug(
+                logger.LogDebug(
                     "Exit CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config) Constructor...");
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occured in CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
 
         // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        private ILogger Logger { get; }
+        private ILogger logger { get; }
 
         public void Login()
         {
-            Logger.LogDebug("Entering CitrixAdcStore Login Method...");
-            _nss ??= new nitro_service(_clientMachine, _useSsl ? "https" : "http");
+            logger.LogDebug("Entering CitrixAdcStore Login Method...");
+            nss ??= new nitro_service(_clientMachine, useSsl ? "https" : "http");
             base_response response = null;
             try
             {
-                response = _nss.login(_username, _password, Timeout);
-                Logger.LogDebug($"Login Response: {JsonConvert.SerializeObject(response)}");
+                response = nss.login(username, password, Timeout);
+                logger.LogDebug($"Login Response: {JsonConvert.SerializeObject(response)}");
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Error in Login: {ex.Message}");
+                logger.LogError($"Error in Login: {ex.Message}");
                 throw new Exception("Error logging in to CitrixAdc Device", ex);
             }
             finally
             {
-                if (response != null && !_nss.isLogin()) throw new Exception(response.message);
+                if (response != null && !nss.isLogin()) throw new Exception(response.message);
             }
 
-            Logger.LogDebug("Exiting CitrixAdcStore Login Method...");
+            logger.LogDebug("Exiting CitrixAdcStore Login Method...");
         }
 
         public bool Logout()
         {
             try
             {
-                Logger.LogDebug("Entering Logout Method...");
-                _nss.logout();
+                logger.LogDebug("Entering Logout Method...");
+                nss.logout();
             }
             catch (Exception e)
             {
-                Logger.LogError($"Logout Error Occurred: {LogHandler.FlattenException(e)}");
+                logger.LogError($"Logout Error Occurred: {LogHandler.FlattenException(e)}");
                 return false;
             }
 
-            Logger.LogDebug("Exiting Logout Method...");
+            logger.LogDebug("Exiting Logout Method...");
             return true;
         }
 
@@ -158,12 +157,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug($"Entering and Exiting GetBinding Method... CertKey={certKey}");
-                return sslcertkey_binding.get(_nss, certKey);
+                logger.LogDebug($"Entering and Exiting GetBinding Method... CertKey={certKey}");
+                return sslcertkey_binding.get(nss, certKey);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error in GetBinding(): {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error in GetBinding(): {LogHandler.FlattenException(e)}");
                 return null;
             }
         }
@@ -172,12 +171,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering and Exiting ListKeyPairs() Method...");
-                return sslcertkey.get(_nss, name);
+                logger.LogDebug("Entering and Exiting ListKeyPairs() Method...");
+                return sslcertkey.get(nss, name);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error in ListKeyPairs(): {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error in ListKeyPairs(): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
@@ -186,12 +185,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering and Exiting ListKeyPairs() Method...");
-                return sslcertkey.get(_nss);
+                logger.LogDebug("Entering and Exiting ListKeyPairs() Method...");
+                return sslcertkey.get(nss);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error in ListKeyPairs(): {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error in ListKeyPairs(): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
@@ -200,12 +199,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering and Exiting ListFiles() Method...");
-                return systemfile.get(_nss, nitroServiceOptions);
+                logger.LogDebug("Entering and Exiting ListFiles() Method...");
+                return systemfile.get(nss, nitroServiceOptions);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error in ListFiles(): {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error in ListFiles(): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
@@ -215,46 +214,46 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering UploadCertificate() Method...");
+                logger.LogDebug("Entering UploadCertificate() Method...");
                 var (pemFile, privateKeyFile) = GetPem(contents, pwd, alias);
 
-                Logger.LogTrace("Starting UploadFile(pemFile,overwrite) call");
+                logger.LogTrace("Starting UploadFile(pemFile,overwrite) call");
                 //upload certificate
                 UploadFile(pemFile, overwrite);
-                Logger.LogTrace("Finishing UploadFile(pemFile,overwrite) call");
+                logger.LogTrace("Finishing UploadFile(pemFile,overwrite) call");
 
 
                 //upload private key
                 if (privateKeyFile != null)
                 {
-                    Logger.LogTrace("PrivateKeyFile is not null so uploading private key");
+                    logger.LogTrace("PrivateKeyFile is not null so uploading private key");
                     //we default overwrite private key as certificate upload has already succeeded and this file needs to be in sync
                     UploadFile(privateKeyFile, true);
-                    Logger.LogTrace("Finished Uploading Private Key");
+                    logger.LogTrace("Finished Uploading Private Key");
                 }
 
                 return (pemFile, privateKeyFile);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error in UploadCertificate(): {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error in UploadCertificate(): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
 
         private void UploadFile(systemfile f, bool overwrite)
         {
-            Logger.LogDebug("Entering UploadFile() Method...");
+            logger.LogDebug("Entering UploadFile() Method...");
             try
             {
-                Logger.LogDebug($"File Content: {JsonConvert.SerializeObject(f)}");
-                Logger.LogTrace("Trying to add File");
-                var _ = systemfile.add(_nss, f);
-                Logger.LogTrace("File Added");
+                logger.LogDebug($"File Content: {JsonConvert.SerializeObject(f)}");
+                logger.LogTrace("Trying to add File");
+                var _ = systemfile.add(nss, f);
+                logger.LogTrace("File Added");
             }
             catch (nitro_exception ne)
             {
-                Logger.LogTrace($"Nitro Exception Occured {ne.Message}");
+                logger.LogTrace($"Nitro Exception Occured {ne.Message}");
                 // ReSharper disable once SuspiciousTypeConversion.Global
                 if ((ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists"))
                     && overwrite)
@@ -264,13 +263,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         filename = f.filename,
                         filelocation = f.filelocation
                     };
-                    Logger.LogDebug($"Old File Content: {JsonConvert.SerializeObject(fOld)}");
-                    systemfile.delete(_nss, fOld);
-                    systemfile.add(_nss, f);
+                    logger.LogDebug($"Old File Content: {JsonConvert.SerializeObject(fOld)}");
+                    systemfile.delete(nss, fOld);
+                    systemfile.add(nss, f);
                 }
                 else
                 {
-                    Logger.LogError("Unexpected Nitro Error Occurred");
+                    logger.LogError("Unexpected Nitro Error Occurred");
                     throw;
                 }
             }
@@ -280,19 +279,19 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering DeleteFile(string contents, string alias) Method...");
-                Logger.LogTrace($"alias: {alias} storePath: {StorePath}");
+                logger.LogDebug("Entering DeleteFile(string contents, string alias) Method...");
+                logger.LogTrace($"alias: {alias} path: {storePath}");
                 var f = new systemfile
                 {
                     filename = alias,
-                    filelocation = StorePath
+                    filelocation = storePath
                 };
-                Logger.LogDebug("Exiting DeleteFile() Method...");
+                logger.LogDebug("Exiting DeleteFile() Method...");
                 return DeleteFile(f);
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occurred in DeleteFile(string contents, string alias): {LogHandler.FlattenException(e)}");
                 throw;
             }
@@ -302,13 +301,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering and Exiting DeleteFile() Method...");
-                Logger.LogTrace($"Deleting certificate at {f.filelocation}/{f.filename}");
-                return systemfile.delete(_nss, f);
+                logger.LogDebug("Entering and Exiting DeleteFile() Method...");
+                logger.LogTrace($"Deleting certificate at {f.filelocation}/{f.filename}");
+                return systemfile.delete(nss, f);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error Occurred in DeleteFile(): {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error Occurred in DeleteFile(): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
@@ -317,13 +316,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering and Exiting DeleteFile() Method...");
-                Logger.LogTrace($"Deleting certificate at {f}");
-                return sslcertkey.delete(_nss, f);
+                logger.LogDebug("Entering and Exiting DeleteFile() Method...");
+                logger.LogTrace($"Deleting certificate at {f}");
+                return sslcertkey.delete(nss, f);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error Occurred in DeleteFile(): {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error Occurred in DeleteFile(): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
@@ -333,48 +332,48 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering FindKeyPairByCertPath(string certPath) Method...");
-                Logger.LogTrace($"certPath: {certPath}");
+                logger.LogDebug("Entering FindKeyPairByCertPath(string certPath) Method...");
+                logger.LogTrace($"certPath: {certPath}");
                 var filters = new filtervalue[1];
                 filters[0] = new filtervalue("cert", certPath);
-                var filteredResults = sslcertkey.get_filtered(_nss, filters);
-                Logger.LogTrace($"filteredResults: {JsonConvert.SerializeObject(filteredResults)}");
+                var filteredResults = sslcertkey.get_filtered(nss, filters);
+                logger.LogTrace($"filteredResults: {JsonConvert.SerializeObject(filteredResults)}");
                 if (filteredResults != null && filteredResults.Length > 0) return filteredResults[0].certkey;
-                Logger.LogDebug("Exiting FindKeyPairByCertPath(string certPath) Method...");
+                logger.LogDebug("Exiting FindKeyPairByCertPath(string certPath) Method...");
                 return null;
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occurred in FindKeyPairByCertPath(string certPath): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
 
-        public sslcertkey[] FindCertKeyByCertLocation(string certLocation,string storePath)
+        public sslcertkey[] FindCertKeyByCertLocation(string certLocation, string path)
         {
             try
             {
-                Logger.LogDebug("Entering FindCertKeyByCertLocation(string certPath) Method...");
-                Logger.LogTrace($"certLocation: {certLocation}");
+                logger.LogDebug("Entering FindCertKeyByCertLocation(string certPath) Method...");
+                logger.LogTrace($"certLocation: {certLocation}");
                 var filters = new filtervalue[1];
                 filters[0] = new filtervalue("cert", certLocation);
-                var filteredResults = sslcertkey.get_filtered(_nss, filters);
-                
+                var filteredResults = sslcertkey.get_filtered(nss, filters);
+
                 //First try without the path if null try with path, citrix sends multiple ways depending how the cert is installed
-                if(filteredResults==null)
+                if (filteredResults == null)
                 {
-                    filters[0] = new filtervalue("cert", storePath + certLocation);
-                    filteredResults = sslcertkey.get_filtered(_nss, filters);
+                    filters[0] = new filtervalue("cert", path + certLocation);
+                    filteredResults = sslcertkey.get_filtered(nss, filters);
                 }
 
-                Logger.LogTrace($"filteredResults: {JsonConvert.SerializeObject(filteredResults)}");
-                Logger.LogDebug("Exiting FindCertKeyByCertLocation(string certPath) Method...");
+                logger.LogTrace($"filteredResults: {JsonConvert.SerializeObject(filteredResults)}");
+                logger.LogDebug("Exiting FindCertKeyByCertLocation(string certPath) Method...");
                 return filteredResults;
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occurred in FindKeyPairByCertPath(string certPath): {LogHandler.FlattenException(e)}");
                 throw;
             }
@@ -384,14 +383,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug(
+                logger.LogDebug(
                     "Entering UpdateKeyPair(string keyPairName, string certPath, string keyPath) Method...");
-                Logger.LogTrace($"keyPairName: {keyPairName} certPath:{certPath} keyPath{keyPath}");
+                logger.LogTrace($"keyPairName: {keyPairName} certPath:{certPath} keyPath{keyPath}");
                 var filters = new filtervalue[1];
                 filters[0] = new filtervalue("certKey", keyPairName);
-                Logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {keyPairName}");
-                var count = sslcertkey.count_filtered(_nss, filters);
-                Logger.LogTrace($"Count of certkey with {keyPairName}: {count}");
+                logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {keyPairName}");
+                var count = sslcertkey.count_filtered(nss, filters);
+                logger.LogTrace($"Count of certkey with {keyPairName}: {count}");
 
                 if (count > 0)
                 {
@@ -401,18 +400,18 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         cert = certPath
                     };
 
-                    Logger.LogTrace($"result: {JsonConvert.SerializeObject(result)}");
+                    logger.LogTrace($"result: {JsonConvert.SerializeObject(result)}");
                     keyPath = certPath + ".key";
-                    Logger.LogTrace($"keyPath: {keyPath}");
+                    logger.LogTrace($"keyPath: {keyPath}");
 
                     //Existing keypair exists
                     result.key = keyPath;
                     result.inform = "PEM";
                     result.nodomaincheck = true;
 
-                    Logger.LogTrace($"Updating certificate-key pair with name {keyPairName}");
-                    var _ = sslcertkey.change(_nss, result);
-                    var unused = sslcertkey.update(_nss, result);
+                    logger.LogTrace($"Updating certificate-key pair with name {keyPairName}");
+                    var _ = sslcertkey.change(nss, result);
+                    var unused = sslcertkey.update(nss, result);
                 }
                 else
                 {
@@ -428,14 +427,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         s.passplain = "0"; // Unused, but required, dummy variable
                     }
 
-                    Logger.LogTrace($"Adding certificate-key pair with name {keyPairName}");
-                    sslcertkey.add(_nss, s);
-                    Logger.LogTrace($"Finished Adding certificate-key pair with name {keyPairName}");
+                    logger.LogTrace($"Adding certificate-key pair with name {keyPairName}");
+                    sslcertkey.add(nss, s);
+                    logger.LogTrace($"Finished Adding certificate-key pair with name {keyPairName}");
                 }
             }
             catch (nitro_exception ne)
             {
-                Logger.LogError($"Exception occured while trying to add or update {keyPairName}");
+                logger.LogError($"Exception occured while trying to add or update {keyPairName}");
                 if ((((uint) ne.HResult).Equals(0x80138500) || ((uint) ne.HResult).Equals(0x80131500)) &&
                     ne.Message.Contains("Resource already exists"))
                 {
@@ -444,7 +443,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         var start = ne.Message.IndexOf("Contents, ", StringComparison.Ordinal) + "Contents, ".Length;
                         var end = ne.Message.IndexOf(']', start);
                         keyPairName = ne.Message.Substring(start, end - start);
-                        Logger.LogError($"Certificate keypair already existed on as {keyPairName}");
+                        logger.LogError($"Certificate keypair already existed on as {keyPairName}");
                     }
                 }
                 else
@@ -453,7 +452,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 }
             }
 
-            Logger.LogDebug("Exiting UpdateKeyPair(string keyPairName, string certPath, string keyPath) Method...");
+            logger.LogDebug("Exiting UpdateKeyPair(string keyPairName, string certPath, string keyPath) Method...");
             return keyPairName;
         }
 
@@ -461,24 +460,24 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug(
+                logger.LogDebug(
                     "Entering UpdateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey) Method...");
-                Logger.LogTrace($"alias: {alias} keyPairName: {keyPairName}");
+                logger.LogTrace($"alias: {alias} keyPairName: {keyPairName}");
 
-                var certPath = StorePath + "/" + keyPairName;
-                Logger.LogTrace($"certPath: {certPath}");
+                var certPath = storePath + "/" + keyPairName;
+                logger.LogTrace($"certPath: {certPath}");
 
                 //see if keypair already exists, if it does then we have to generate a new name to prevent downtime
-                Logger.LogTrace($"keyPairName: {keyPairName} certPath:{certPath} checking if already exists.");
+                logger.LogTrace($"keyPairName: {keyPairName} certPath:{certPath} checking if already exists.");
 
                 if (string.IsNullOrWhiteSpace(keyPairName))
                 {
-                    Logger.LogTrace("string.IsNullOrWhiteSpace(keyPairName) is True");
+                    logger.LogTrace("string.IsNullOrWhiteSpace(keyPairName) is True");
                     var existingKeyPair = FindKeyPairByCertPath(certPath);
-                    Logger.LogTrace($"existingKeyPair: {existingKeyPair}");
+                    logger.LogTrace($"existingKeyPair: {existingKeyPair}");
                     if (existingKeyPair != null)
                     {
-                        Logger.LogTrace($"existingKeyPair not Null: {existingKeyPair}");
+                        logger.LogTrace($"existingKeyPair not Null: {existingKeyPair}");
                         keyPairName = existingKeyPair;
                     }
                     else
@@ -488,15 +487,15 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 }
 
                 string keyPath = null;
-                if (privateKey != null) keyPath = StorePath + "/" + alias + ".key";
-                Logger.LogTrace($"keyPath: {keyPath}");
-                Logger.LogDebug(
+                if (privateKey != null) keyPath = storePath + "/" + alias + ".key";
+                logger.LogTrace($"keyPath: {keyPath}");
+                logger.LogDebug(
                     "Exiting UpdateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey) Method...");
                 return UpdateKeyPair(keyPairName, certPath, keyPath);
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occurred in UpdateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey): {LogHandler.FlattenException(e)}");
                 throw;
             }
@@ -506,12 +505,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug($"Entering and Exiting GetBindingByVServerKey Method... vServerName={vServerName}");
-                return sslvserver_sslcertkey_binding.get(_nss, vServerName);
+                logger.LogDebug($"Entering and Exiting GetBindingByVServerKey Method... vServerName={vServerName}");
+                return sslvserver_sslcertkey_binding.get(nss, vServerName);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error in GetBinding(): {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error in GetBinding(): {LogHandler.FlattenException(e)}");
                 return null;
             }
         }
@@ -524,7 +523,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 alias = alias.Substring(0, Math.Min(40, alias.Length));
 
 
-            Logger.LogTrace($"keyPairName: {alias}");
+            logger.LogTrace($"keyPairName: {alias}");
             return alias;
         }
 
@@ -532,7 +531,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Enter UpdateBindings(string keyPairName, string virtualServerName)");
+                logger.LogDebug("Enter UpdateBindings(string keyPairName, string virtualServerName)");
 
 
                 var sniArray = sniCert.Split(',');
@@ -547,7 +546,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             (sniArray[i].ToUpper() == "TRUE" || sniArray[i].ToUpper() == "FALSE"))
                             sniBool = Convert.ToBoolean(sniArray[i]);
 
-                        Logger.LogTrace($"Updating bindings for {virtualServerName}");
+                        logger.LogTrace($"Updating bindings for {virtualServerName}");
                         //bind key-pair to vserver
                         var ssb = new sslvserver_sslcertkey_binding
                         {
@@ -555,23 +554,23 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             vservername = vsName,
                             snicert = sniBool
                         };
-                        Logger.LogTrace($"Adding binding {keyPairName} for virtual server {virtualServerName}");
+                        logger.LogTrace($"Adding binding {keyPairName} for virtual server {virtualServerName}");
 
                         //Citrix Requires you do delete first when SNI with same domain or you will get a duplicate domain error
                         var filters = new filtervalue[1];
                         filters[0] = new filtervalue("certKeyName", keyPairName);
-                        if (sniBool && sslvserver_sslcertkey_binding.count_filtered(_nss, vsName, filters) > 0)
-                            sslvserver_sslcertkey_binding.delete(_nss, ssb);
-                        sslvserver_sslcertkey_binding.add(_nss, ssb);
+                        if (sniBool && sslvserver_sslcertkey_binding.count_filtered(nss, vsName, filters) > 0)
+                            sslvserver_sslcertkey_binding.delete(nss, ssb);
+                        sslvserver_sslcertkey_binding.add(nss, ssb);
 
                         i++;
-                        Logger.LogDebug("Exit UpdateBindings(string keyPairName, string virtualServerName)");
+                        logger.LogDebug("Exit UpdateBindings(string keyPairName, string virtualServerName)");
                     }
                 }
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occurred in UpdateBindings(string keyPairName, string virtualServerName): {LogHandler.FlattenException(e)}");
                 throw;
             }
@@ -581,7 +580,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)");
+                logger.LogDebug("Entering GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)");
                 var p = new Pkcs12Store(new MemoryStream(pfxBytes), pfxPassword);
 
                 // Extract private key
@@ -590,7 +589,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var pemWriter = new PemWriter(streamWriter);
 
                 var alias = p.Aliases.Cast<string>().SingleOrDefault(a => p.IsKeyEntry(a));
-                Logger.LogTrace($"alias: {alias}");
+                logger.LogTrace($"alias: {alias}");
 
                 var publicKey = p.GetCertificate(alias).Certificate.GetPublicKey();
                 if (p.GetKey(alias) == null) throw new Exception($"Unable to get the key for alias: {alias}");
@@ -616,12 +615,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var certPem =
                     certStart + Pemify(Convert.ToBase64String(p.GetCertificate(alias).Certificate.GetEncoded())) +
                     certEnd;
-                Logger.LogDebug("Exiting GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)");
+                logger.LogDebug("Exiting GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)");
                 return (Encoding.ASCII.GetBytes(certPem), Encoding.ASCII.GetBytes(privateKeyString));
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occurred in GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword): {LogHandler.FlattenException(e)}");
                 throw;
             }
@@ -631,7 +630,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering GetPem(string contents, string pwd, string alias)");
+                logger.LogDebug("Entering GetPem(string contents, string pwd, string alias)");
                 var pemFile = new systemfile();
                 systemfile privateKeyFile = null;
 
@@ -646,7 +645,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     {
                         filecontent = Convert.ToBase64String(privateKey),
                         filename = alias + ".key",
-                        filelocation = StorePath
+                        filelocation = storePath
                     };
 
                     // set pem file from cert in pfx
@@ -658,22 +657,22 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 }
 
                 pemFile.filename = alias;
-                pemFile.filelocation = StorePath;
-                Logger.LogDebug("Exiting GetPem(string contents, string pwd, string alias)");
+                pemFile.filelocation = storePath;
+                logger.LogDebug("Exiting GetPem(string contents, string pwd, string alias)");
 
                 return (pemFile, privateKeyFile);
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occurred in GetPem(string contents, string pwd, string alias): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
 
-        public X509Certificate2 GetX509Certificate(string fileLocation,out bool hasKey)
+        public X509Certificate2 GetX509Certificate(string fileLocation, out bool hasKey)
         {
-            Logger.LogDebug("Entering GetX509Certificate(string fileLocation, out bool hasKey)");
+            logger.LogDebug("Entering GetX509Certificate(string fileLocation, out bool hasKey)");
             systemfile f;
 
             string certString = null;
@@ -681,19 +680,19 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             try
             {
-                Logger.LogTrace($"Trying GetSystemFile(fileLocation): {fileLocation}");
+                logger.LogTrace($"Trying GetSystemFile(fileLocation): {fileLocation}");
                 f = GetSystemFile(fileLocation);
-                Logger.LogTrace($"Finished GetSystemFile(fileLocation): {fileLocation}");
+                logger.LogTrace($"Finished GetSystemFile(fileLocation): {fileLocation}");
             }
             catch
             {
-                Logger.LogError("Error Occurred in GetSystemFile(fileLocation)");
+                logger.LogError("Error Occurred in GetSystemFile(fileLocation)");
                 hasKey = false;
                 return null;
             }
 
             //Ignore Directories
-            if (f.filemode!=null && f.filemode[0].ToUpper() == "DIRECTORY")
+            if (f.filemode != null && f.filemode[0].ToUpper() == "DIRECTORY")
             {
                 hasKey = false;
                 return null;
@@ -710,11 +709,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var containsKey = fileString.IndexOf("-----BEGIN RSA PRIVATE KEY-----", StringComparison.Ordinal) >= 0;
                 var containsCert = fileString.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal) >= 0;
 
-                Logger.LogTrace($"containsKey: {containsKey} containsCert: {containsCert}");
+                logger.LogTrace($"containsKey: {containsKey} containsCert: {containsCert}");
 
                 if (containsCert && containsKey)
                 {
-                    Logger.LogTrace($"File contains certificate and key: {fileLocation}");
+                    logger.LogTrace($"File contains certificate and key: {fileLocation}");
 
                     var keyStart = fileString.IndexOf("-----BEGIN RSA PRIVATE KEY-----", StringComparison.Ordinal);
                     var keyEnd = fileString.IndexOf("-----END RSA PRIVATE KEY-----", StringComparison.Ordinal) +
@@ -726,24 +725,23 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 }
                 else if (containsCert)
                 {
-                    Logger.LogTrace("containsCert");
+                    logger.LogTrace("containsCert");
                     certString = fileString;
                     // check .key file
                     try
                     {
                         keyString = string.Empty;
 
-                        var binding = FindCertKeyByCertLocation(fileLocation,StorePath);
+                        var binding = FindCertKeyByCertLocation(fileLocation, storePath);
                         if (binding != null)
                         {
-                            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
                             var keyFile = GetSystemFile(binding[0].key);
                             keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
                         }
                     }
                     catch (Exception e)
                     {
-                        Logger.LogError("Unable to evaluate private key - " + LogHandler.FlattenException(e));
+                        logger.LogError("Unable to evaluate private key - " + LogHandler.FlattenException(e));
                     }
                 }
 
@@ -760,8 +758,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 catch (Exception e)
                 {
                     // Not a certificate file
-                    Logger.LogError($"Error reading x509Certificate at {fileLocation}");
-                    Logger.LogError(LogHandler.FlattenException(e));
+                    logger.LogError($"Error reading x509Certificate at {fileLocation}");
+                    logger.LogError(LogHandler.FlattenException(e));
                     hasKey = false;
                     return null;
                 }
@@ -771,12 +769,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             catch (Exception e)
             {
                 // Not a certificate file
-                Logger.LogError($"{fileLocation} is not a certificate");
-                Logger.LogError(LogHandler.FlattenException(e));
+                logger.LogError($"{fileLocation} is not a certificate");
+                logger.LogError(LogHandler.FlattenException(e));
                 hasKey = false;
             }
 
-            Logger.LogDebug("Exiting GetX509Certificate(string fileLocation, out bool hasKey)");
+            logger.LogDebug("Exiting GetX509Certificate(string fileLocation, out bool hasKey)");
             return x;
         }
 
@@ -784,20 +782,20 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering GetSystemFile(string fileName)");
+                logger.LogDebug("Entering GetSystemFile(string fileName)");
                 var option = new systemfile_args();
-                Logger.LogTrace($"urlPath: {StorePath} fileName:{fileName}");
+                logger.LogTrace($"urlPath: {storePath} fileName:{fileName}");
 
                 //option.set_args($"filelocation:{urlPath},filename:{fileName}");
-                option.filelocation = StorePath;
-                var f = new systemfile {filelocation = StorePath, filename = Path.GetFileName(fileName)};
-                var result = systemfile.get(_nss, f);
-                Logger.LogDebug("Exiting GetSystemFile(string fileName)");
+                option.filelocation = storePath;
+                var f = new systemfile {filelocation = storePath, filename = Path.GetFileName(fileName)};
+                var result = systemfile.get(nss, f);
+                logger.LogDebug("Exiting GetSystemFile(string fileName)");
                 return result;
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error Occurred in GetSystemFile(string fileName): {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error Occurred in GetSystemFile(string fileName): {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
@@ -806,9 +804,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             var filters = new filtervalue[1];
             filters[0] = new filtervalue("certKey", alias);
-            Logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {alias}");
-            var count = sslcertkey.count_filtered(_nss, filters);
-            Logger.LogTrace($"Count of certkey with {alias}: {count}");
+            logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {alias}");
+            var count = sslcertkey.count_filtered(nss, filters);
+            logger.LogTrace($"Count of certkey with {alias}: {count}");
 
             if (count > 0)
                 return true;
@@ -819,7 +817,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering ReadX509Certificate(string certString)");
+                logger.LogDebug("Entering ReadX509Certificate(string certString)");
                 // Determine if it's a cert
                 byte[] b = null;
                 X509Certificate2 x;
@@ -827,11 +825,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     b = Encoding.Default.GetBytes(certString);
                     x = new X509Certificate2(b);
-                    Logger.LogTrace($"Found certificate with subject {x.Subject}");
+                    logger.LogTrace($"Found certificate with subject {x.Subject}");
                 }
                 catch (Exception e)
                 {
-                    Logger.LogError(
+                    logger.LogError(
                         $"Error Occurred Trying to Load X509Certificate2: {LogHandler.FlattenException(e)}");
                     if (b != null)
                     {
@@ -846,12 +844,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     throw e;
                 }
 
-                Logger.LogDebug("Exiting ReadX509Certificate(string certString)");
+                logger.LogDebug("Exiting ReadX509Certificate(string certString)");
                 return x;
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                logger.LogError(
                     $"Error Occurred in ReadX509Certificate(string certString): {LogHandler.FlattenException(e)}");
                 throw;
             }
@@ -859,7 +857,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private bool EvaluatePrivateKey(X509Certificate2 cert, string keyString)
         {
-            Logger.LogDebug("Entering EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
+            logger.LogDebug("Entering EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
             if (string.IsNullOrEmpty(keyString)) return false;
             try
             {
@@ -867,15 +865,15 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var privateKey = (RsaPrivateCrtKeyParameters) keypair.Private;
 
                 var publicKey = (RsaKeyParameters) DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
-                Logger.LogDebug("Exiting EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
+                logger.LogDebug("Exiting EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
 
                 return privateKey.Modulus.Equals(publicKey.Modulus) &&
                        publicKey.Exponent.Equals(privateKey.PublicExponent);
             }
             catch (Exception e)
             {
-                Logger.LogError("Unable to evaluate private key - " + e.Message);
-                Logger.LogError(LogHandler.FlattenException(e));
+                logger.LogError("Unable to evaluate private key - " + e.Message);
+                logger.LogError(LogHandler.FlattenException(e));
                 return false;
             }
         }
@@ -884,12 +882,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             try
             {
-                Logger.LogDebug("Entering and Exiting SaveConfiguration Method...");
-                _ = _nss.save_config();
+                logger.LogDebug("Entering and Exiting SaveConfiguration Method...");
+                _ = nss.save_config();
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error in SaveConfiguration: {LogHandler.FlattenException(e)}");
+                logger.LogError($"Error in SaveConfiguration: {LogHandler.FlattenException(e)}");
                 throw;
             }
         }
