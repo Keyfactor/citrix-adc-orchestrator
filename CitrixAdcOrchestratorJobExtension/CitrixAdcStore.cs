@@ -865,6 +865,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             logger.LogDebug("Entering EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
             if (string.IsNullOrEmpty(keyString)) return false;
+
+            //If the key is encrypted, we can't tell 100% for sure it matches the public key but it is a likely match
+            if(keyString.Contains("PRIVATE KEY-",StringComparison.OrdinalIgnoreCase) && keyString.Contains("ENCRYPTED", StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning($"Key is encrypted but a likely match for cert {cert.Thumbprint} {cert.Subject}");
+                return true;
+            }
+
             try
             {
                 var keypair = (AsymmetricCipherKeyPair) new PemReader(new StringReader(keyString)).ReadObject();
