@@ -117,6 +117,13 @@ API Endpoint|Methods
 /nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
 /nitro/v1/config/systemfile| get, add, delete
 
+Here is a sample policy with Min Permissions:
+Action: 
+Allow
+Command Spec: 
+(^stat\s+(cr|cs|lb|system|vpn))|(^(add|rm|show)\s+system\s+file\s+.*)|(^\S+\s+ssl\s+.*)|(^(show|stat|sync)\s+HA\s+.*)|(^save\s+ns\s+config)|(^(switch|show)\s+ns\s+partition.*)
+
+
 ### Upgrade Procedures
 
 * Upgrade From v1.0.2 to v2.0.0
