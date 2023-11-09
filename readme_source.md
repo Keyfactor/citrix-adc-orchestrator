@@ -17,9 +17,9 @@ API Endpoint|Methods
 /nitro/v1/config/systemfile| get, add, delete
 
 Here is a sample policy with Min Permissions:
-Action: 
+* Action: 
 Allow
-Command Spec: 
+* Command Spec: 
 (^stat\s+(cr|cs|lb|system|vpn))|(^(add|rm|show)\s+system\s+file\s+.*)|(^\S+\s+ssl\s+.*)|(^(show|stat|sync)\s+HA\s+.*)|(^save\s+ns\s+config)|(^(switch|show)\s+ns\s+partition.*)
 
 
