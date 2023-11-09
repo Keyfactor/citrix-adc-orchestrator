@@ -14,14 +14,11 @@ The Universal Orchestrator is part of the Keyfactor software distribution and is
 The Universal Orchestrator is the successor to the Windows Orchestrator. This Orchestrator Extension plugin only works with the Universal Orchestrator and does not work with the Windows Orchestrator.
 
 
-
-
 ## Support for Citrix Netscaler Universal Orchestrator
 
 Citrix Netscaler Universal Orchestrator is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative.
 
 ###### To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
-
 
 
 ---
@@ -160,7 +157,7 @@ API Endpoint|Methods
 **Basic Settings**
 
 CONFIG ELEMENT	| VALUE | DESCRIPTION
-------------------|------------------
+------------------|------------------|----------------
 Name  |Citrix ADC	|A descriptive name for the extension.  Example:  CitrixAdc
 Short Name|CitrixADC|The short name that identifies the registered functionality of the orchestrator. Must be CitrixAdc.
 Custom Capability|Unchecked|Store type name orchestrator will register with.
@@ -174,7 +171,7 @@ Supports Entry Password|Unchecked |Determined if an individual entry within a st
 **Advanced Settings**
 
 CONFIG ELEMENT	| VALUE | DESCRIPTION
-------------------|------------------
+------------------|------------------|----------------
 Store Path Type	|Freeform	|Determines what restrictions are applied to the store path field when configuring a new store.
 Supports Custom	Alias		|Required	|Determines if an individual entry within a store can have a custom Alias.
 Private Keys	|Required	|This determines if Keyfactor can send the private key associated with a certificate to the store.  This is required since Citrix ADC will need the private key material to establish TLS connections.
@@ -192,16 +189,9 @@ ServerUseSsl|Use SSL|Bool|True|Yes|Determine whether the server uses SSL or not
 
 Name|Display Name|Type|Default Value|Required|Description
 ---|---|---|---|---|---
-virtualServerName|Virtual Server Name|String| |Leave All Unchecked|Contains the name of the VServer the operation should be performed upon
+virtualServerName|Virtual Server Name|String| |Leave All Unchecked|When Enrolling, this can be a single or comma separated list of VServers in NetScaler to replace. <br/>**NOTE:** When adding multiple VServers, each certificate will contain the same alias name.
 sniCert|SNI Cert|String|false
 
-
-#### STORE TYPE ENTRY PARAMS
-CONFIG ELEMENT	| DESCRIPTION
-------------------|------------------
-Alias | When Enrolling, this is the name of the Certificate that will be installed on NetScaler.
-Virtual Server	| When Enrolling, this can be a single or comma separated list of VServers in NetScaler to replace. <br/>**NOTE:** When adding multiple VServers, each certificate will contain the same alias name.
-SNI Cert| When multiple VServers are used, a comma separated value must be accompanied with each VServer name.
 
 </details>
 
