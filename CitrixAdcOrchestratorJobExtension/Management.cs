@@ -81,15 +81,15 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
         private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite,string sniCert)
+            string virtualServerName, bool overwrite, string sniCert, bool linkToIssuer)
         {
             _logger.LogTrace("Enter performAdd");
             var alias = cert.Alias;
-            AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias,sniCert);
+            AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias, sniCert, linkToIssuer);
         }
 
         private void AddBindCert(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite, string alias,string sniCert)
+            string virtualServerName, bool overwrite, string alias, string sniCert, bool linkToIssuer)
         {
             var (pemFile, privateKeyFile) =
                 store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, alias, overwrite);
@@ -100,7 +100,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
-            store.UpdateBindings(keyPairName, virtualServerName,sniCert);
+            store.UpdateBindings(keyPairName, virtualServerName, sniCert);
+
+            if (linkToIssuer)
+            {
+                store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, keyPairName);
+            }
         }
 
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
@@ -136,6 +141,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             _logger.LogDebug("Begin Add...");
                             var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
                             var sniCert =  (string)jobConfiguration.JobProperties["sniCert"];
+                            var linkToIssuer = false;
+                            if (jobConfiguration.JobProperties.ContainsKey("linkToIssuer"))
+                                linkToIssuer = (bool)jobConfiguration.JobProperties["linkToIssuer"];
 
                             //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
                             var keyPairName = jobConfiguration.JobCertificate.Alias;
@@ -152,7 +160,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             {
                                 _logger.LogDebug($"Begin Add/Enrollment... overwrite: {jobConfiguration.Overwrite}");
                                 PerformAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
-                                    jobConfiguration.Overwrite, sniCert);
+                                    jobConfiguration.Overwrite, sniCert, linkToIssuer);
                                 _logger.LogDebug("End Add/Enrollment...");
                             }
                             else
@@ -183,7 +191,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                                 _logger.LogTrace(
                                                     $"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
                                                 PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
-                                                    sBinding.servername, true,sniCert);
+                                                    sBinding.servername, true,sniCert, linkToIssuer);
                                                 _logger.LogTrace(
                                                     $"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
                                             }

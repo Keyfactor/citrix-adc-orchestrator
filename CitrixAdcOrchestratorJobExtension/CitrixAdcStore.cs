@@ -15,6 +15,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Xml.Linq;
@@ -407,7 +408,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             catch (nitro_exception ne)
             {
                 Logger.LogError($"Exception occured while trying to add or update {keyPairName}");
-                if ((((uint) ne.HResult).Equals(0x80138500) || ((uint) ne.HResult).Equals(0x80131500)) &&
+                if ((((uint)ne.HResult).Equals(0x80138500) || ((uint)ne.HResult).Equals(0x80131500)) &&
                     ne.Message.Contains("Resource already exists"))
                 {
                     if (ne.Message.Contains("certkeyName Contents,"))
@@ -546,6 +547,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     $"Error Occurred in UpdateBindings(string keyPairName, string virtualServerName): {LogHandler.FlattenException(e)}");
                 throw;
             }
+        }
+
+        public void LinkToIssuer(string cert, string privateKeyPassword, string keyPairName)
+        {
+
         }
 
         private (byte[], byte[]) GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)
