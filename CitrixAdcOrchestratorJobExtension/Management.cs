@@ -112,7 +112,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             _logger.LogTrace("Enter PerformDelete");
             var sslKeyFile = store.GetKeyPairByName(cert.Alias);
-
+            
             //1. Delete the Keypair
             store.DeleteKeyPair(sslKeyFile);
 
