@@ -658,14 +658,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             catch
             {
-                Logger.LogError("Error Occurred in GetSystemFile(fileLocation)");
-                hasKey = false;
-                return null;
-            }
-
-            //Ignore Directories
-            if (f.filemode != null && f.filemode[0].ToUpper() == "DIRECTORY")
-            {
+                logger.LogError("Error Occurred in GetSystemFile(fileLocation)");
                 hasKey = false;
                 return null;
             }
@@ -753,12 +746,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var option = new systemfile_args();
                 Logger.LogTrace($"urlPath: {StorePath} fileName:{fileName}");
 
-                //option.set_args($"filelocation:{urlPath},filename:{fileName}");
-                option.filelocation = StorePath;
-                var f = new systemfile { filelocation = StorePath, filename = fileName };
-                var result = systemfile.get(_nss, f);
-                Logger.LogDebug("Exiting GetSystemFile(string fileName)");
-                return result;
+                logger.LogDebug($"filelocation:{urlPath},filename:{fileName} not found");
+                throw new Exception("file not found");
             }
             catch (Exception e)
             {
@@ -831,8 +820,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var keypair = (AsymmetricCipherKeyPair)new PemReader(new StringReader(keyString)).ReadObject();
                 var privateKey = (RsaPrivateCrtKeyParameters)keypair.Private;
 
-                var publicKey = (RsaKeyParameters)DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
-                Logger.LogDebug("Exiting EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
+                var publicKey = (RsaKeyParameters) DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
+                logger.LogDebug("Exiting EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
 
                 return privateKey.Modulus.Equals(publicKey.Modulus) &&
                        publicKey.Exponent.Equals(privateKey.PublicExponent);
