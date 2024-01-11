@@ -407,7 +407,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             catch (nitro_exception ne)
             {
                 Logger.LogError($"Exception occured while trying to add or update {keyPairName}");
-                if ((((uint) ne.HResult).Equals(0x80138500) || ((uint) ne.HResult).Equals(0x80131500)) &&
+                if ((((uint)ne.HResult).Equals(0x80138500) || ((uint)ne.HResult).Equals(0x80131500)) &&
                     ne.Message.Contains("Resource already exists"))
                 {
                     if (ne.Message.Contains("certkeyName Contents,"))
@@ -663,6 +663,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 return null;
             }
 
+            //Ignore Directories
+            if (f.filemode != null && f.filemode[0].ToUpper() == "DIRECTORY")
+            {
+                hasKey = false;
+                return null;
+            }
+
             // Determine if it's a cert
             X509Certificate2 x = null;
             try
@@ -695,7 +702,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     // check .key file
                     try
                     {
-                        var keyFile = GetSystemFile(fileLocation + ".key");
+                        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
+                        var keyFile = GetSystemFile(fileNameWithoutExtension + ".key");
                         keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
                     }
                     catch (Exception e)
@@ -747,7 +755,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 //option.set_args($"filelocation:{urlPath},filename:{fileName}");
                 option.filelocation = StorePath;
-                var f = new systemfile {filelocation = StorePath, filename = fileName};
+                var f = new systemfile { filelocation = StorePath, filename = fileName };
                 var result = systemfile.get(_nss, f);
                 Logger.LogDebug("Exiting GetSystemFile(string fileName)");
                 return result;
@@ -820,10 +828,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             if (string.IsNullOrEmpty(keyString)) return false;
             try
             {
-                var keypair = (AsymmetricCipherKeyPair) new PemReader(new StringReader(keyString)).ReadObject();
-                var privateKey = (RsaPrivateCrtKeyParameters) keypair.Private;
+                var keypair = (AsymmetricCipherKeyPair)new PemReader(new StringReader(keyString)).ReadObject();
+                var privateKey = (RsaPrivateCrtKeyParameters)keypair.Private;
 
-                var publicKey = (RsaKeyParameters) DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
+                var publicKey = (RsaKeyParameters)DotNetUtilities.FromX509Certificate(cert).GetPublicKey();
                 Logger.LogDebug("Exiting EvaluatePrivateKey(X509Certificate2 cert, string keyString)");
 
                 return privateKey.Modulus.Equals(publicKey.Modulus) &&
