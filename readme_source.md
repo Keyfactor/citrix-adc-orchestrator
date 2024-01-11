@@ -1,47 +1,80 @@
-**Netscaler Cert Store Type Setup**
+# Citrix ADC Orchestrator Configuration
+## Overview
 
 The Citrix ADC Orchestrator remotely manages certificates on the NetScaler device.  Since the ADC supports services including: 
 Load Balancing, Authentication/Authorization/Auditing (AAA), and Gateways, this orchestrator can bind to any of these virtual servers when using unique virtual server names for each service.
 
-![](Images/CertStoreType-Basic.gif)
+### Permissions
 
-*2. Cert Store Type Advanced Settings*
-![](Images/CertStoreType-Advanced.gif)
+The NetScaler user needs permission to perform the following API calls:
 
-*3. Cert Store Type Custom Fields*
-![](Images/CertStoreType-CustomFields.gif)
+API Endpoint|Methods
+---|---
+/nitro/v1/config/login|post
+/nitro/v1/config/lbvserver| get
+/nitro/v1/config/sslcertkey| get, update, add, delete
+/nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
+/nitro/v1/config/systemfile| get, add, delete
 
-*4. Cert Store Type Entry Params - Virtual Server*
-![](Images/CertStoreType-VServerEntry.gif)
+Here is a sample policy with Min Permissions:
+* Action: 
+Allow
+* Command Spec: 
+(^stat\s+(cr|cs|lb|system|vpn))|(^(add|rm|show)\s+system\s+file\s+.*)|(^\S+\s+ssl\s+.*)|(^(show|stat|sync)\s+HA\s+.*)|(^save\s+ns\s+config)|(^(switch|show)\s+ns\s+partition.*)
 
-*5. Cert Store Type Entry Params - KPEntry*
-![](Images/CertStoreType-KPEntry.gif)
 
-#### STORE TYPE ENTRY PARAMS
-CONFIG ELEMENT	| DESCRIPTION
-------------------|------------------
-Virtual Server	| When Enrolling, this can be a single or comma separated list of VServers in Netscaler to replace.
-Key Pair| When Enrolling, this is the name of the Certificate that will be installed on Netscaler
+### Upgrade Procedures
 
-**Netscaler Cert Store Setup**
+* Upgrade From v1.0.2 to v2.0.0
+	* In the Keyfactor Command Database, run the following SQL Script to update the store types and store information [Upgrade Script](https://github.com/Keyfactor/citrix-adc-orchestrator/blob/snipamupdates/UpgradeScript.sql)
 
-*1. Cert Store Base Settings*
+### Below are specific notes and limitations
 
-![](Images/CertStore-Base.gif)
+* Direct PFX Binding Inventory
+	* In NetScaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in NetScaler is descibed in this [NetScaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
 
-*2. Cert Store Credential Setup*
+* Specifiy Multiple VServers and Sni Flags
+	* When Binding to Multiple VServers and using Multiple SniFlags, you must use a comma separated list of values as described in Test Case 13 in the Test Cases Section.  This will change in future version, so each binding is a store in Keyfactor.
 
-![](Images/CertStore-Credentials.gif)
+* Down Time When Replacing Certs
+	* The orchestrator uses [NetScaler recommended methods](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/add-group-certs.html) to replace bound certs which creates a sub second blip of downtime.  There is currently no way around this if you want readable keypair names.
 
-#### STORE CONFIG
-CONFIG ELEMENT	| DESCRIPTION
-------------------|------------------
-Client Machine	| This is the IP Address of the Netscaler Appliance.
-Store Path| This is the path of the Netscaler Appliance.  The value shown in the screenshot is the default path.
-User| This is the user that will be authenticated against the Netscaler Appliance
-Password| This is the password that will be authenticated against the Netscaler Appliance
+* Removing Certs from Store
+	* As defined in Test Cases 5 and 13 below, certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server and then remove the cert using Command.  This requirement may change in a future version.
 
-**Netscaler permissions needed**
+* Renewals
+	* The renewal process will find the thumbprint of the cert on all VServers and renew them in all places.  See test cases #6 and #10 in the Test Cases section.
+	
+* AutoSave Config
+	* A new config.json file in the extension folder contains the 'AutoSaveConfig' flag with a default value of 'N'.  When this flag is set to 'Y', successful configuration changes made by a management job will be automatically saved to disk; no interaction with the Citrix ADC UI is necessary.
+	
+	**NOTE:** Any changes in-process through the Citrix ADC UI will also be persisted to disk when a management job is performed and the AutoSaveConfig flag is set to 'Y'.
+
+* Support for Virtual Authentication Servers & Gateways
+	* When performing management operations to either of services, Users may enter the specific VServer name to complete the operation.
+
+	**NOTE:** If multiple VServers share the same Alias, all VServers that share that alias will be updated.
+<details>
+  <summary>Cert Store Type Settings</summary>
+<br />
+
+![](Images/CertStoreTypeSettings.gif)
+
+**Basic Settings**
+
+CONFIG ELEMENT	| VALUE | DESCRIPTION
+------------------|------------------|----------------
+Name  |Citrix ADC	|A descriptive name for the extension.  Example:  CitrixAdc
+Short Name|CitrixADC|The short name that identifies the registered functionality of the orchestrator. Must be CitrixAdc.
+Custom Capability|Unchecked|Store type name orchestrator will register with.
+Supported Job Types|Inventory, Add, Remove	|Job types this extension supports
+Needs Server | Checked | Determines if a target server name is required when creating store
+Blueprint Allowed | Unchecked | Determines if store type may be included in an Orchestrator blueprint
+Uses PowerShell | Unchecked | Determines if underlying implementation is PowerShell
+Requires Store Password|Unchecked |Determines if a store password is required when configuring an individual store.
+Supports Entry Password|Unchecked |Determined if an individual entry within a store can have a password.
+
+**Advanced Settings**
 
 CONFIG ELEMENT	| VALUE | DESCRIPTION
 ------------------|------------------|----------------
@@ -52,25 +85,40 @@ PFX Password Style			|Default or Custom	|This determines how the platform genera
 
 **Custom Fields**
 
-**Enrollment Multiple Virtual Servers**
+Name|Display Name|Type|Default Value|Required|Description
+---|---|---|---|---|---
+ServerUsername|Server Username|Secret||No|The username to log into the Server
+ServerPassword|Server Password|Secret||No|The password that matches the username to log into the Server
+ServerUseSsl|Use SSL|Bool|True|Yes|Determine whether the server uses SSL or not
 
-This will enroll the certificate and bind it to multiple VServers.  If you just want one VServer then include that one Server without commas.
+**Entry Parameters**
 
-*1. Comma Separate the VServers*
+Name|Display Name|Type|Default Value|Required|Description
+---|---|---|---|---|---
+virtualServerName|Virtual Server Name|String| |Leave All Unchecked|When Enrolling, this can be a single or comma separated list of VServers in NetScaler to replace. <br/>**NOTE:** When adding multiple VServers, each certificate will contain the same alias name.
+sniCert|SNI Cert|String|false
 
-![](Images/EnrollMultipleVServers.gif)
 
 </details>
 
-**Renewal**
+<details>
+  <summary>Cert Store Setup</summary>
+<br />
 
-This will renew the certificate and update all of the VServer Bindings on Netscaler that have that same thumbprint.
+![](Images/CertStore.gif)
 
-![](Images/Renewal.gif)
+#### STORE CONFIG
+CONFIG ELEMENT	| DESCRIPTION
+------------------|------------------
+Client Machine	| This is the IP Address of the NetScaler Appliance.
+Store Path| This is the path of the NetScaler Appliance.  /nsconfig/ssl/.
+User| This is the user that will be authenticated against the NetScaler Appliance
+Password| This is the password that will be authenticated against the NetScaler Appliance
+Use SSL| This should be set to True in Production when there is a valid certificate.
+Inventory Schedule| Set this for the appropriate inventory interval needed.
 
-**Inventory**
+</details>
 
-This will inventory the certs on the Netscaler appliance and also update the entry parameters back into Keyfactor.
 
 
 <details>
@@ -94,4 +142,4 @@ Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
 13	|Add Sni Cert To Multiple VServers and bind|**Alias:** TC13.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,true|Adds and binds Cert to TestVServer and adds and binds Sni Cert to TestVServer2|True|![](Images/TC13.gif)
 14	|Inventory |No Params|Will Perform Inventory and pull down all Certs Tied to VServers|True|![](Images/TC14.gif)
 
-![](Images/Remove.gif)
+</details>
