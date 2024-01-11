@@ -43,14 +43,18 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public JobResult ProcessJob(InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
         {
-            logger.LogDebug($"Client Machine: {jobConfiguration.CertificateStoreDetails.ClientMachine}");
-            logger.LogDebug($"UseSSL: {jobConfiguration.UseSSL}");
-            logger.LogDebug($"StorePath: {jobConfiguration.CertificateStoreDetails.StorePath}");
+            _logger = LogHandler.GetClassLogger<Inventory>();
+            _logger.LogDebug($"Client Machine: {jobConfiguration.CertificateStoreDetails.ClientMachine}");
+            _logger.LogDebug($"UseSSL: {jobConfiguration.UseSSL}");
+            _logger.LogDebug($"StorePath: {jobConfiguration.CertificateStoreDetails.StorePath}");
+            ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
+            ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
 
-            logger.LogDebug("Entering ProcessJob");
-            CitrixAdcStore store = new CitrixAdcStore(jobConfiguration);
 
-            logger.LogDebug("Logging into Citrix...");
+            _logger.LogDebug("Entering ProcessJob");
+            CitrixAdcStore store = new CitrixAdcStore(jobConfiguration, ServerUserName, ServerPassword);
+
+            _logger.LogDebug("Logging into Citrix...");
             store.Login();
 
             JobResult result = ProcessJob(store, jobConfiguration, submitInventoryUpdate);
@@ -72,8 +76,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private JobResult ProcessJob(CitrixAdcStore store, InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
         {
-            logger.LogDebug("Begin Inventory...");
-            
+            _logger.LogDebug("Begin New Bindings Fix Inventory...");
+
             List<CurrentInventoryItem> inventory = new List<CurrentInventoryItem>();
 
             try
@@ -120,17 +124,29 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         var binding = store.GetBinding(keyPairName);
 
                         var vserverBindings = binding?.sslcertkey_sslvserver_binding;
-                        if (vserverBindings != null) { 
-                            var virtualServerName = String.Join(",", vserverBindings.Select(p=>p.servername));
-                            logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
-                            parameters.Add("virtualServerName", virtualServerName);
-                        }
-                        //TODO: Other binding methods
-                        //binding.sslcertkey_service_binding
-                        //binding.sslcertkey_crldistribution_binding
-                        //binding.sslcertkey_sslocspresponder_binding
-                    }
+                        if (vserverBindings != null)
+                        {
+                            try
+                            {
+                                var virtualServerName = String.Join(",", vserverBindings.Select(p => p.servername));
+                                _logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
+                                parameters.Add("virtualServerName", virtualServerName);
+                                string bindingsCsv = string.Empty;
+                                foreach (string server in virtualServerName.Split(','))
+                                {
+                                    var bindings = store.GetBindingByVServer(server);
+                                    var first = bindings.FirstOrDefault(b => b.certkeyname == keyPairName);
+                                    if (first != null) bindingsCsv += first.snicert + ",";
+                                }
+                                parameters.Add("sniCert", bindingsCsv.TrimEnd(','));
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogError($"Error handling SNI or VServerBindings {LogHandler.FlattenException(e)}");
+                            }
 
+                        }
+                    }
 
                     inventory.Add(new CurrentInventoryItem()
                     {
