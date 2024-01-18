@@ -15,6 +15,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -551,43 +552,23 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public void LinkToIssuer(string cert, string privateKeyPassword, string keyPairName)
         {
-            int pageSize = 50;
-            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
-
-            filtervalue[] filters = new filtervalue[0];
-            filters[0] = new filtervalue("certificatetype", "ROOT_CERT|INTM_CERT");
-            int caTotal = Convert.ToInt32(sslcertkey.count_filtered(_nss, filters));
-            if (caTotal == 0)
-                throw new Exception("No CA certificates were found in Netscaler instance.  Certificate successfully added but not linked to its issuer.");
-
-            int pageCount = (caTotal / pageSize) + 1;
-            options o = new options();
-            o.set_pagesize(50);
-
-            X509Certificate2 x509Cert = new X509Certificate2(Encoding.ASCII.GetBytes(cert));
-            bool certFound = false;
-            for (int i = 1; i <= pageCount; i++)
+            sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
+            if (chain.chaincomplete == 1)
             {
-                if (certFound)
-                    break;
-                o.set_pageno(i);
-                sslcertkey[] caCerts = sslcertkey.get_filtered(_nss, filters);
-
-                foreach(sslcertkey caCert in caCerts)
-                {
-                    if (caCert.subject == x509Cert.Issuer)
-                    {
-                        certKey.linkcertkeyname = caCert.certkey;
-                        certFound = true;
-                        break;
-                    }
-                }
+                Logger.LogDebug($"Certificate {keyPairName} already linked to {chain.chainlinked}");
+                return;
             }
 
-            if (certFound)
-                sslcertkey.link(_nss, certKey);
-            else
-                throw new Exception("No issuing CA certificate was found for the added certificate.  Certificate successfully added but not linked to its issuer.")
+            if (chain.chainpossiblelinks == null || string.IsNullOrEmpty(chain.chainpossiblelinks[0]) || chain.chainpossiblelinks.Length == 0)
+            {
+                string msg = $"Certificate added, but link not performed.  No Issuing CA Certificate exists for {keyPairName}.";
+                Logger.LogWarning(msg);
+                throw new LinkException(msg);
+            }
+            
+            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
+            certKey.linkcertkeyname = chain.chainpossiblelinks[0];
+            sslcertkey.link(_nss, certKey);
         }
 
         private (byte[], byte[]) GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)
@@ -892,5 +873,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 throw;
             }
         }
+    }
+
+    public class LinkException : Exception 
+    {
+        public LinkException(string message) : base(message) { }
     }
 }

@@ -85,12 +85,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 _logger.LogDebug("Getting file list...");
                 var files = store.ListFiles();
 
-                Dictionary<string, string> existing = jobConfiguration.LastInventory.ToDictionary(i => i.Alias, i => i.Thumbprints.First());
+                ///////Dictionary<string, string> existing = jobConfiguration.LastInventory.ToDictionary(i => i.Alias, i => i.Thumbprints.First());
                 // ReSharper disable once CollectionNeverQueried.Local
                 HashSet<string> processedAliases = new HashSet<string>();
 
                 //union the remote keys + last Inventory
-                List<String> contentsToCheck = files?.Select(x => x.filename).Union(existing.Keys).ToList() ?? new List<string>();
+                List<String> contentsToCheck = files?.Select(x => x.filename).ToList() ?? new List<string>();
 
                 _logger.LogDebug("Getting KeyPair list...");
                 var keyPairList = store.ListKeyPairs();
