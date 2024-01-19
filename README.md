@@ -155,6 +155,9 @@ Allow
 	* When performing management operations to either of services, Users may enter the specific VServer name to complete the operation.
 
 	**NOTE:** If multiple VServers share the same Alias, all VServers that share that alias will be updated.
+
+* Supports optional linking of added certificates to issuing CA certificate if issuing CA is already installed in the managed Netscaler instance.
+
 <details>
   <summary>Cert Store Type Settings</summary>
 <br />
@@ -191,6 +194,7 @@ Name|Display Name|Type|Default Value|Required|Description
 ServerUsername|Server Username|Secret||No|The username to log into the Server
 ServerPassword|Server Password|Secret||No|The password that matches the username to log into the Server
 ServerUseSsl|Use SSL|Bool|True|Yes|Determine whether the server uses SSL or not
+linkToIssuer|Link To Issuer|Bool|False|False|Determines whether attempt will be made to link certificate added via a Management-Add job to its issuing CA certificate
 
 **Entry Parameters**
 
