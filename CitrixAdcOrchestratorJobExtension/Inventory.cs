@@ -52,7 +52,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
 
             _logger.LogDebug("Entering ProcessJob");
-            CitrixAdcStore store = new CitrixAdcStore(jobConfiguration,ServerUserName,ServerPassword);
+            CitrixAdcStore store = new CitrixAdcStore(jobConfiguration, ServerUserName, ServerPassword);
 
             _logger.LogDebug("Logging into Citrix...");
             store.Login();
@@ -76,8 +76,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private JobResult ProcessJob(CitrixAdcStore store, InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
         {
-            _logger.LogDebug("Begin Inventory...");
-            
+            _logger.LogDebug("Begin New Bindings Fix Inventory...");
+
             List<CurrentInventoryItem> inventory = new List<CurrentInventoryItem>();
 
             try
@@ -109,7 +109,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                     processedAliases.Add(s);
 
-                    Dictionary<string,object> parameters = new Dictionary<string, object>();
+                    Dictionary<string, object> parameters = new Dictionary<string, object>();
 
                     var containsKeyWithPath = keyPairMap.ContainsKey(store.StorePath + "/" + s);
                     var containsKey = keyPairMap.ContainsKey(s);
@@ -126,17 +126,25 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         var vserverBindings = binding?.sslcertkey_sslvserver_binding;
                         if (vserverBindings != null)
                         {
-                            var virtualServerName = String.Join(",", vserverBindings.Select(p => p.servername));
-                            _logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
-                            parameters.Add("virtualServerName", virtualServerName);
-                            string bindingsCsv = string.Empty;
-                            foreach (string server in virtualServerName.Split(','))
+                            try
                             {
-                                var bindings = store.GetBindingByVServer(server);
-                                var first = bindings.FirstOrDefault(b => b.certkeyname == keyPairName);
-                                if (first != null) bindingsCsv += first.snicert + ",";
+                                var virtualServerName = String.Join(",", vserverBindings.Select(p => p.servername));
+                                _logger.LogDebug($"Found virtualServerName(s): {virtualServerName}");
+                                parameters.Add("virtualServerName", virtualServerName);
+                                string bindingsCsv = string.Empty;
+                                foreach (string server in virtualServerName.Split(','))
+                                {
+                                    var bindings = store.GetBindingByVServer(server);
+                                    var first = bindings.FirstOrDefault(b => b.certkeyname == keyPairName);
+                                    if (first != null) bindingsCsv += first.snicert + ",";
+                                }
+                                parameters.Add("sniCert", bindingsCsv.TrimEnd(','));
                             }
-                            parameters.Add("sniCert", bindingsCsv.TrimEnd(','));
+                            catch (Exception e)
+                            {
+                                _logger.LogError($"Error handling SNI or VServerBindings {LogHandler.FlattenException(e)}");
+                            }
+
                         }
                     }
 
