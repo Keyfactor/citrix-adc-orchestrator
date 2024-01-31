@@ -20,6 +20,8 @@ using Keyfactor.Orchestrators.Extensions.Interfaces;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.IO;
+using static Org.BouncyCastle.Math.EC.ECCurve;
+using com.citrix.netscaler.nitro.resource.config.pq;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -81,15 +83,15 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
         private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite,string sniCert)
+            string virtualServerName, bool overwrite, string sniCert, bool linkToIssuer)
         {
             _logger.LogTrace("Enter performAdd");
             var alias = cert.Alias;
-            AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias,sniCert);
+            AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias, sniCert, linkToIssuer);
         }
 
         private void AddBindCert(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite, string alias,string sniCert)
+            string virtualServerName, bool overwrite, string alias, string sniCert, bool linkToIssuer)
         {
             var (pemFile, privateKeyFile) =
                 store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, alias, overwrite);
@@ -100,14 +102,19 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
-            store.UpdateBindings(keyPairName, virtualServerName,sniCert);
+            store.UpdateBindings(keyPairName, virtualServerName, sniCert);
+
+            if (linkToIssuer)
+            {
+                store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, keyPairName);
+            }
         }
 
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
         {
             _logger.LogTrace("Enter PerformDelete");
             var sslKeyFile = store.GetKeyPairByName(cert.Alias);
-
+            
             //1. Delete the Keypair
             store.DeleteKeyPair(sslKeyFile);
 
@@ -137,6 +144,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
                             var sniCert =  (string)jobConfiguration.JobProperties["sniCert"];
 
+                            dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
+                            var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
+
                             //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
                             var keyPairName = jobConfiguration.JobCertificate.Alias;
 
@@ -152,7 +162,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             {
                                 _logger.LogDebug($"Begin Add/Enrollment... overwrite: {jobConfiguration.Overwrite}");
                                 PerformAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
-                                    jobConfiguration.Overwrite, sniCert);
+                                    jobConfiguration.Overwrite, sniCert, linkToIssuer);
                                 _logger.LogDebug("End Add/Enrollment...");
                             }
                             else
@@ -178,14 +188,26 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                         if (x?.Thumbprint == _thumbprint)
                                         {
                                             _logger.LogTrace($"Thumbprint Match: {_thumbprint}");
-                                            foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
+                                            if (binding.sslcertkey_sslvserver_binding == null)
                                             {
                                                 _logger.LogTrace(
-                                                    $"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                                    $"Starting PerformAdd Binding kp.certkey: {kp.certkey}");
                                                 PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
-                                                    sBinding.servername, true,sniCert);
+                                                    virtualServerName, true, sniCert, linkToIssuer);
                                                 _logger.LogTrace(
-                                                    $"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                                    $"Finished PerformAdd kp.certkey: {kp.certkey}");
+                                            }
+                                            else
+                                            {
+                                                foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
+                                                {
+                                                    _logger.LogTrace(
+                                                        $"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                                    PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
+                                                        sBinding.servername, true, sniCert, linkToIssuer);
+                                                    _logger.LogTrace(
+                                                        $"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                                }
                                             }
                                         }
                                     }
@@ -222,6 +244,16 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                 $"Site {jobConfiguration.CertificateStoreDetails.StorePath} on server {jobConfiguration.CertificateStoreDetails.ClientMachine}: Unsupported operation: {jobConfiguration.OperationType.ToString()}"
                         };
                 }
+            }
+            catch (LinkException ex)
+            {
+                //Status: 2=Success, 3=Warning, 4=Error
+                return new JobResult
+                {
+                    Result = OrchestratorJobStatusJobResult.Warning,
+                    JobHistoryId = jobConfiguration.JobHistoryId,
+                    FailureMessage = ex.Message
+                };
             }
             catch (Exception ex)
             {

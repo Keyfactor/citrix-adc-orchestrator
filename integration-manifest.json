@@ -6,11 +6,13 @@
   "link_github": true,
   "update_catalog": true,
   "support_level": "kf-supported",
+  "release_dir": "CitrixAdcOrchestratorJobExtension/bin/Release/netcoreapp3.1",
   "description": "Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store.",
   "about": {
     "orchestrator": {
       "UOFramework": "10.1",
       "pam_support": true,
+      "keyfactor_platform_version": "9.10",
       "win": {
         "supportsCreateStore": false,
         "supportsDiscovery": false,
@@ -28,6 +30,95 @@
         "supportsReenrollment": false,
         "supportsInventory": true,
         "platformSupport": "Unused"
+      },
+      "store_types": {
+        "CitrixAdc": {
+          "Name": "CitrixAdc",
+          "ShortName": "CitrixAdc",
+          "Capability": "CitrixAdc",
+          "LocalStore": false,
+          "SupportedOperations": {
+            "Add": true,
+            "Create": false,
+            "Discovery": false,
+            "Enrollment": false,
+            "Remove": true
+          },
+          "Properties": [
+            {
+              "Name": "ServerUsername",
+              "DisplayName": "Server Username",
+              "Type": "Secret",
+              "DependsOn": null,
+              "DefaultValue": null,
+              "Required": false
+            },
+            {
+              "Name": "ServerPassword",
+              "DisplayName": "Server Password",
+              "Type": "Secret",
+              "DependsOn": null,
+              "DefaultValue": null,
+              "Required": false
+            },
+            {
+              "Name": "ServerUseSsl",
+              "DisplayName": "Use SSL",
+              "Type": "Bool",
+              "DependsOn": null,
+              "DefaultValue": "true",
+              "Required": true
+            },
+            {
+              "Name": "linkToIssuer",
+              "DisplayName": "Link To Issuer",
+              "Type": "Bool",
+              "DependsOn": null,
+              "DefaultValue": "false",
+              "Required": false
+            }
+          ],
+          "EntryParameters": [
+            {
+              "Name": "virtualServerName",
+              "DisplayName": "Virtual Server Name",
+              "Type": "String",
+              "RequiredWhen": {
+                "HasPrivateKey": false,
+                "OnAdd": false,
+                "OnRemove": false,
+                "OnReenrollment": false
+              }
+            },
+            {
+              "Name": "sniCert",
+              "DisplayName": "SNI Cert",
+              "Type": "String",
+              "RequiredWhen": {
+                "HasPrivateKey": false,
+                "OnAdd": true,
+                "OnRemove": false,
+                "OnReenrollment": false
+              },
+              "DefaultValue": "FALSE"
+            }
+          ],
+          "PasswordOptions": {
+            "EntrySupported": false,
+            "StoreRequired": false,
+            "Style": "Default"
+          },
+          "PrivateKeyAllowed": "Required",
+          "JobProperties": [
+            "virtualServerName",
+            "sniCert"
+          ],
+          "ServerRequired": true,
+          "PowerShell": false,
+          "BlueprintAllowed": false,
+          "CustomAliasAllowed": "Required",
+          "InventoryEndpoint": "/AnyInventory/Update"
+        }
       }
     }
   }
