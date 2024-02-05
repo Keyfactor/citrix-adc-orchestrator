@@ -1,9 +1,9 @@
+
 # Citrix Netscaler Universal Orchestrator
 
 Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store.
 
 #### Integration status: Production - Ready for use in production environments.
-
 
 ## About the Keyfactor Universal Orchestrator Extension
 
@@ -13,23 +13,22 @@ The Universal Orchestrator is part of the Keyfactor software distribution and is
 
 The Universal Orchestrator is the successor to the Windows Orchestrator. This Orchestrator Extension plugin only works with the Universal Orchestrator and does not work with the Windows Orchestrator.
 
-
 ## Support for Citrix Netscaler Universal Orchestrator
 
 Citrix Netscaler Universal Orchestrator is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com
 
 ###### To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
 
-
 ---
 
+
+---
 
 
 
 ## Keyfactor Version Supported
 
 The minimum version of the Keyfactor Universal Orchestrator Framework needed to run this version of the extension is 10.1
-
 ## Platform Specific Notes
 
 The Keyfactor Universal Orchestrator may be installed on either Windows or Linux based platforms. The certificate operations supported by a capability may vary based what platform the capability is installed on. The table below indicates what capabilities are supported based on which platform the encompassing Universal Orchestrator is running.
@@ -155,6 +154,9 @@ Allow
 	* When performing management operations to either of services, Users may enter the specific VServer name to complete the operation.
 
 	**NOTE:** If multiple VServers share the same Alias, all VServers that share that alias will be updated.
+
+* Supports optional linking of added certificates to issuing CA certificate if issuing CA is already installed in the managed Netscaler instance.
+
 <details>
   <summary>Cert Store Type Settings</summary>
 <br />
@@ -191,6 +193,7 @@ Name|Display Name|Type|Default Value|Required|Description
 ServerUsername|Server Username|Secret||No|The username to log into the Server
 ServerPassword|Server Password|Secret||No|The password that matches the username to log into the Server
 ServerUseSsl|Use SSL|Bool|True|Yes|Determine whether the server uses SSL or not
+linkToIssuer|Link To Issuer|Bool|False|False|Determines whether attempt will be made to link certificate added via a Management-Add job to its issuing CA certificate
 
 **Entry Parameters**
 

@@ -68,6 +68,14 @@
               "DependsOn": null,
               "DefaultValue": "true",
               "Required": true
+            },
+            {
+              "Name": "linkToIssuer",
+              "DisplayName": "Link To Issuer",
+              "Type": "Bool",
+              "DependsOn": null,
+              "DefaultValue": "false",
+              "Required": false
             }
           ],
           "EntryParameters": [

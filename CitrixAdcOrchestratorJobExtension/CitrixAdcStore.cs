@@ -15,6 +15,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Xml.Linq;
@@ -548,6 +550,27 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
+        public void LinkToIssuer(string cert, string privateKeyPassword, string keyPairName)
+        {
+            sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
+            if (chain.chaincomplete == 1)
+            {
+                Logger.LogDebug($"Certificate {keyPairName} already linked to {chain.chainlinked}");
+                return;
+            }
+
+            if (chain.chainpossiblelinks == null || string.IsNullOrEmpty(chain.chainpossiblelinks[0]) || chain.chainpossiblelinks.Length == 0)
+            {
+                string msg = $"Certificate added, but link not performed.  No Issuing CA Certificate exists for {keyPairName}.";
+                Logger.LogWarning(msg);
+                throw new LinkException(msg);
+            }
+            
+            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
+            certKey.linkcertkeyname = chain.chainpossiblelinks[0];
+            sslcertkey.link(_nss, certKey);
+        }
+
         private (byte[], byte[]) GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)
         {
             try
@@ -858,5 +881,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 throw;
             }
         }
+    }
+
+    public class LinkException : Exception 
+    {
+        public LinkException(string message) : base(message) { }
     }
 }

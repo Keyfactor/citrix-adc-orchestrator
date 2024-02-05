@@ -1,3 +1,6 @@
+2.1.0
+* Added new Custom Field, Link To Issuer, to identify if Managment-Add jobs should attempt to link an added certificate to its issuing certificate if it resides in Netscaler.
+
 2.0.1
 * Fixed Issue with Inventory when VServer Cannot be retreived by Citrix API
 
