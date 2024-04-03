@@ -100,7 +100,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
-            store.UpdateBindings(keyPairName, virtualServerName,sniCert);
+            if(virtualServerName!=null)
+                store.UpdateBindings(keyPairName,virtualServerName,sniCert);
         }
 
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
@@ -181,11 +182,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                             foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
                                             {
                                                 _logger.LogTrace(
-                                                    $"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                                    $"Starting PerformAdd Binding Name: {sBinding?.servername} kp.certkey: {kp.certkey}");
                                                 PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
-                                                    sBinding.servername, true,sniCert);
+                                                    sBinding?.servername, true, sniCert);
                                                 _logger.LogTrace(
-                                                    $"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                                    $"Finished PerformAdd Binding Name: {sBinding?.servername} kp.certkey: {kp.certkey}");
                                             }
                                         }
                                     }
