@@ -178,14 +178,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                         if (x?.Thumbprint == _thumbprint)
                                         {
                                             _logger.LogTrace($"Thumbprint Match: {_thumbprint}");
-                                            foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
+                                            if (binding?.sslcertkey_sslvserver_binding != null)
                                             {
-                                                _logger.LogTrace(
-                                                    $"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
-                                                PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
-                                                    sBinding.servername, true,sniCert);
-                                                _logger.LogTrace(
-                                                    $"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                                foreach (var sBinding in binding?.sslcertkey_sslvserver_binding)
+                                                {
+                                                    _logger.LogTrace(
+                                                        $"Starting PerformAdd Binding Name: {sBinding?.servername} kp.certkey: {kp?.certkey}");
+                                                    PerformAdd(store, jobConfiguration.JobCertificate, kp?.certkey,
+                                                        sBinding?.servername, true, sniCert);
+                                                    _logger.LogTrace(
+                                                        $"Finished PerformAdd Binding Name: {sBinding?.servername} kp.certkey: {kp?.certkey}");
+                                                }
                                             }
                                         }
                                     }
