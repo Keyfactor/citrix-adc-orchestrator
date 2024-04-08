@@ -100,7 +100,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
-            store.UpdateBindings(keyPairName, virtualServerName,sniCert);
+            if(virtualServerName!=null)
+                store.UpdateBindings(keyPairName, virtualServerName,sniCert);
         }
 
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
@@ -166,29 +167,47 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                 //2. For Each check the binding /config/sslcertkey_binding store.GetBinding(strKey)
                                 foreach (var kp in keyPairList)
                                 {
-                                    var binding = store.GetBinding(kp.certkey);
-                                    _logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
-                                    if (binding != null)
+                                    //4. Open the file and check the thumbprint
+                                    var x = store.GetX509Certificate(
+                                        kp.cert.Substring(kp.cert.LastIndexOf("/", StringComparison.Ordinal) + 1),
+                                        out _);
+                                    
+                                    //5. If the Thumbprint matches the cert renewed from KF then PerformAdd With Overwrite 
+                                    if (x?.Thumbprint == _thumbprint)
                                     {
-                                        //4. Open the file and check the thumbprint
-                                        var x = store.GetX509Certificate(
-                                            kp.cert.Substring(kp.cert.LastIndexOf("/", StringComparison.Ordinal) + 1),
-                                            out _);
-                                        //5. If the Thumbprint matches the cert renewed from KF then PerformAdd With Overwrite 
-                                        if (x?.Thumbprint == _thumbprint)
+                                        _logger.LogTrace($"Thumbprint Match: {_thumbprint}");
+                                        var binding = store.GetBinding(kp.certkey);
+                                        _logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
+                                        if (binding != null)
                                         {
-                                            _logger.LogTrace($"Thumbprint Match: {_thumbprint}");
-                                            foreach (var sBinding in binding.sslcertkey_sslvserver_binding)
+                                            if (binding?.sslcertkey_sslvserver_binding != null)
                                             {
-                                                _logger.LogTrace(
-                                                    $"Starting PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
-                                                PerformAdd(store, jobConfiguration.JobCertificate, kp.certkey,
-                                                    sBinding.servername, true,sniCert);
-                                                _logger.LogTrace(
-                                                    $"Finished PerformAdd Binding Name: {sBinding.servername} kp.certkey: {kp.certkey}");
+                                                foreach (var sBinding in binding?.sslcertkey_sslvserver_binding)
+                                                {
+                                                    _logger.LogTrace(
+                                                        $"Starting PerformAdd Binding Name: {sBinding?.servername} kp.certkey: {kp?.certkey}");
+                                                    PerformAdd(store, jobConfiguration.JobCertificate, kp?.certkey,
+                                                        sBinding?.servername, true, sniCert);
+                                                    _logger.LogTrace(
+                                                        $"Finished PerformAdd Binding Name: {sBinding?.servername} kp.certkey: {kp?.certkey}");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                _logger.LogTrace($"Renewing cert with no binding Information");
+                                                PerformAdd(store, jobConfiguration.JobCertificate, kp?.certkey, null, true, null);
+                                                _logger.LogTrace($"Finished Renewing cert with no binding Information");
                                             }
                                         }
+                                        else
+                                        {
+                                            _logger.LogTrace($"Renewing cert with no binding Information");
+                                            PerformAdd(store, jobConfiguration.JobCertificate, kp?.certkey,null, true, null);
+                                            _logger.LogTrace($"Finished Renewing cert with no binding Information");
+                                        }
+
                                     }
+
                                 }
                             }
                         }
