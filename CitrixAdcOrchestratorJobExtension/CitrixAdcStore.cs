@@ -732,7 +732,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     // check .key file
                     try
                     {
-                        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
+                        var fileNameWithoutExtension = fileLocation;
+                        if (fileLocation.EndsWith(".crt",StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".pem", StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".pfx", StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".cert", StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".der", StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
+                        }
                         var keyFile = GetSystemFile(fileNameWithoutExtension + ".key");
                         keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
                     }
