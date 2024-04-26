@@ -102,7 +102,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
-            store.UpdateBindings(keyPairName, virtualServerName, sniCert);
+            if (virtualServerName != null)
+                store.UpdateBindings(keyPairName, virtualServerName, sniCert);
 
             if (linkToIssuer)
             {
