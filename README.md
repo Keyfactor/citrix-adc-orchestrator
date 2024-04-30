@@ -38,7 +38,7 @@ The Keyfactor Universal Orchestrator may be installed on either Windows or Linux
 |Supports Management Remove|&check; |&check; |
 |Supports Create Store|  |  |
 |Supports Discovery|  |  |
-|Supports Renrollment|  |  |
+|Supports Reenrollment|  |  |
 |Supports Inventory|&check; |&check; |
 
 
@@ -247,4 +247,7 @@ Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
 14	|Inventory |No Params|Will Perform Inventory and pull down all Certs Tied to VServers|True|![](Images/TC14.gif)
 
 </details>
+
+When creating cert store type manually, that store property names and entry parameter names are case sensitive
+
 
