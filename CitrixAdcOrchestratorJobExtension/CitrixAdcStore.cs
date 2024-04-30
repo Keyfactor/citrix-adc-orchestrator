@@ -669,6 +669,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             Logger.LogDebug("Entering GetX509Certificate(string fileLocation, out bool hasKey)");
             systemfile f;
+            string[] privateKeyDelims = new string[3] { "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY-----" };
 
             string certString = null;
             string keyString = null;
@@ -701,18 +702,24 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var fileString = Encoding.Default.GetString(b);
 
                 // Check if private key is included with certificate
-                var containsKey = fileString.IndexOf("-----BEGIN RSA PRIVATE KEY-----", StringComparison.Ordinal) >= 0;
+                var privateKeyIdx = -1;
+                foreach(string privateKeyDelim in privateKeyDelims)
+                {
+                    if (fileString.IndexOf(privateKeyDelim, StringComparison.Ordinal) >= 0)
+                        privateKeyIdx = Array.IndexOf(privateKeyDelims, privateKeyDelim);
+                }
+                
                 var containsCert = fileString.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal) >= 0;
 
-                Logger.LogTrace($"containsKey: {containsKey} containsCert: {containsCert}");
+                Logger.LogTrace($"containsKey: {privateKeyIdx > -1} containsCert: {containsCert}");
 
-                if (containsCert && containsKey)
+                if (containsCert && privateKeyIdx > -1)
                 {
                     Logger.LogTrace($"File contains certificate and key: {fileLocation}");
 
-                    var keyStart = fileString.IndexOf("-----BEGIN RSA PRIVATE KEY-----", StringComparison.Ordinal);
-                    var keyEnd = fileString.IndexOf("-----END RSA PRIVATE KEY-----", StringComparison.Ordinal) +
-                                 "-----END RSA PRIVATE KEY-----".Length;
+                    var keyStart = fileString.IndexOf(privateKeyDelims[privateKeyIdx], StringComparison.Ordinal);
+                    var keyEnd = fileString.IndexOf(privateKeyDelims[privateKeyIdx].Replace("BEGIN","END"), StringComparison.Ordinal) +
+                                 privateKeyDelims[privateKeyIdx].Replace("BEGIN", "END").Length;
 
                     // check if need to remove new line
                     keyString = fileString.Substring(keyStart, keyEnd - keyStart);
@@ -725,7 +732,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     // check .key file
                     try
                     {
-                        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
+                        var fileNameWithoutExtension = fileLocation;
+                        if (fileLocation.EndsWith(".crt",StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".pem", StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".pfx", StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".cert", StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".der", StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
+                        }
                         var keyFile = GetSystemFile(fileNameWithoutExtension + ".key");
                         keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
                     }
@@ -754,7 +765,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     return null;
                 }
 
-                hasKey = EvaluatePrivateKey(x, keyString);
+                hasKey = !string.IsNullOrEmpty(keyString);
             }
             catch (Exception e)
             {
