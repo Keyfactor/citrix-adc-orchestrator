@@ -1,3 +1,6 @@
+2.1.2
+* Fix bug identifying private key entry when certificate and key file names differ
+
 2.1.1
 * Fix issue identifying whether inventoried certificate contains a private key.
 * Renewing Unbound Certificates Causes The Job To Fail

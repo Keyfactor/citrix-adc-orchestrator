@@ -20,6 +20,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Extensions.Interfaces;
+using System.Drawing.Text;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -106,6 +107,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     X509Certificate2 x = store.GetX509Certificate(s, out bool privateKeyEntry);
 
                     if (x == null) continue;
+
+                    if (!privateKeyEntry)
+                    {
+                        var certKey = keyPairList.FirstOrDefault(p => p.cert == s);
+                        privateKeyEntry = certKey != null && !string.IsNullOrEmpty(certKey.key);
+                    }
 
                     processedAliases.Add(s);
 
