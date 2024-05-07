@@ -107,6 +107,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                     if (x == null) continue;
 
+                    if (!privateKeyEntry)
+                    {
+                        var certKey = keyPairList.FirstOrDefault(p => p.cert == s);
+                        privateKeyEntry = certKey != null && !string.IsNullOrEmpty(certKey.key);
+                    }
+
                     processedAliases.Add(s);
 
                     Dictionary<string, object> parameters = new Dictionary<string, object>();
