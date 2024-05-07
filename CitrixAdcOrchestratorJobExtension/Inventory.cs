@@ -144,7 +144,29 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             {
                                 _logger.LogError($"Error handling SNI or VServerBindings {LogHandler.FlattenException(e)}");
                             }
+                        }
 
+                        var serviceBindings = binding?.sslcertkey_service_binding;
+                        if (serviceBindings != null)
+                        {
+                            try
+                            {
+                                var serviceName = String.Join(",", serviceBindings.Select(p => p.servicename));
+                                _logger.LogDebug($"Found serviceName(s): {serviceName}");
+                                parameters.Add("serviceName", serviceName);
+                                string bindingsCsv = string.Empty;
+                                foreach (string server in serviceName.Split(','))
+                                {
+                                    var bindings = store.GetBindingByService(server);
+                                    var first = bindings.FirstOrDefault(b => b.certkeyname == keyPairName);
+                                    if (first != null) bindingsCsv += first.snicert + ",";
+                                }
+                                parameters.Add("serviceSniCert", bindingsCsv.TrimEnd(','));
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.LogError($"Error handling SNI or serviceBindings {LogHandler.FlattenException(e)}");
+                            }
                         }
                     }
 

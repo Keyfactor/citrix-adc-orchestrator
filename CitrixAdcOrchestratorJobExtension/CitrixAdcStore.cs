@@ -489,6 +489,20 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
+        public sslservice_sslcertkey_binding[] GetBindingByService(string serviceName)
+        {
+            try
+            {
+                Logger.LogDebug($"Entering and Exiting GetBindingByService Method... serviceName={serviceName}");
+                return sslservice_sslcertkey_binding.get(_nss, serviceName);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error in GetBindingByService(): {LogHandler.FlattenException(e)}");
+                return null;
+            }
+        }
+
         private string GenerateKeyPairName(string alias)
         {
             if (alias == alias.Substring(0, Math.Min(40, alias.Length)))
