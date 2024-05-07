@@ -20,7 +20,6 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Extensions.Interfaces;
-using System.Drawing.Text;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
