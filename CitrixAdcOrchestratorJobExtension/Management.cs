@@ -22,6 +22,8 @@ using Newtonsoft.Json;
 using System.IO;
 using static Org.BouncyCastle.Math.EC.ECCurve;
 using com.citrix.netscaler.nitro.resource.config.pq;
+using com.citrix.netscaler.nitro.resource.config.ssl;
+using com.citrix.netscaler.nitro.service;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -144,6 +146,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             _logger.LogDebug("Begin Add...");
                             var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
                             var sniCert =  (string)jobConfiguration.JobProperties["sniCert"];
+                            var serviceName = (string)jobConfiguration.JobProperties["serviceName"];
+                            var serviceSniCert = (string)jobConfiguration.JobProperties["serviceSniCert"];
 
                             dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
                             var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
@@ -165,6 +169,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                 PerformAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
                                     jobConfiguration.Overwrite, sniCert, linkToIssuer);
                                 _logger.LogDebug("End Add/Enrollment...");
+
+                                if (!string.IsNullOrEmpty(serviceName))
+                                {
+                                    store.BindServices(jobConfiguration.JobCertificate.Alias, serviceName, serviceSniCert);
+                                }
                             }
                             else
                             {

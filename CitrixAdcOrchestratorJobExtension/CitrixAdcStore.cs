@@ -515,6 +515,27 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return alias;
         }
 
+        public void BindServices(string alias, string serviceNames, string serviceSniCerts)
+        {
+            string[] serviceNameList = serviceNames.Split(',');
+            string[] serviceSniCertList = serviceSniCerts.Split(',');
+
+            if (serviceNameList.Length != serviceSniCertList.Length)
+                throw new Exception("Number of Service Names must match number of SNI Services");
+        
+            for (int i = 0; i < serviceNameList.Length; i++)
+            {
+                sslservice_sslcertkey_binding binding = new sslservice_sslcertkey_binding()
+                {
+                    certkeyname = alias,
+                    servicename = serviceNameList[i],
+                    snicert = Convert.ToBoolean(serviceSniCertList[i])
+                };
+
+                sslservice_sslcertkey_binding.add(_nss, binding);
+            };
+        }
+
         public void UpdateBindings(string keyPairName, string virtualServerName, string sniCert)
         {
             try
