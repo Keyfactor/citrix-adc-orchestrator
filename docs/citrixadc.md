@@ -134,8 +134,8 @@ The following table describes the required and optional fields for the `CitrixAd
 | --------- | ----------- | ------------------------- |
 | Category | Select "CitrixAdc" or the customized certificate store name from the previous step. | |
 | Container | Optional container to associate certificate store with. | |
-| Client Machine | Enter the IP address of the Citrix Netscaler appliance where the certificates will be managed. Example: '192.168.1.100'. | |
-| Store Path | Enter the path on the Citrix Netscaler appliance where the certificates are stored. Example: '/nsconfig/ssl/'. | |
+| Client Machine | The IP address of the Citrix ADC appliance where the certificates will be managed. Example: '192.168.1.100'. | |
+| Store Path | The path on the Citrix ADC appliance where the certificates are stored. Example: '/nsconfig/ssl/'. | |
 | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. | |
 
 * **Using kfutil**

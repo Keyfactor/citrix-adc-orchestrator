@@ -1,5 +1,5 @@
 {
-    "$schema": "/Users/hroszell/coding/dev/staff-tools/keyfactor.github.io/v2/integration-manifest-schema.json",
+    "$schema": "https://keyfactor.github.io/v2/integration-manifest-schema.json",
     "integration_type": "orchestrator",
     "name": "Citrix Netscaler Universal Orchestrator",
     "status": "production",
@@ -7,30 +7,12 @@
     "update_catalog": true,
     "support_level": "kf-supported",
     "release_dir": "CitrixAdcOrchestratorJobExtension/bin/Release/netcoreapp3.1",
-    "description": "Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store.",
+    "description": "The Citrix ADC Universal Orchestrator extension enables remote management of cryptographic certificates on Citrix ADC (formerly NetScaler) appliances, supporting various operations such as inventory, addition, removal, and binding of certificates.",
     "about": {
         "orchestrator": {
             "UOFramework": "10.1",
             "pam_support": true,
             "keyfactor_platform_version": "9.10",
-            "win": {
-                "supportsCreateStore": false,
-                "supportsDiscovery": false,
-                "supportsManagementAdd": true,
-                "supportsManagementRemove": true,
-                "supportsReenrollment": false,
-                "supportsInventory": true,
-                "platformSupport": "Unused"
-            },
-            "linux": {
-                "supportsCreateStore": false,
-                "supportsDiscovery": false,
-                "supportsManagementAdd": true,
-                "supportsManagementRemove": true,
-                "supportsReenrollment": false,
-                "supportsInventory": true,
-                "platformSupport": "Unused"
-            },
             "store_types": [
                 {
                     "Name": "CitrixAdc",
@@ -61,8 +43,8 @@
                     "BlueprintAllowed": false,
                     "CustomAliasAllowed": "Required",
                     "InventoryEndpoint": "/AnyInventory/Update",
-                    "ClientMachineDescription": "Enter the IP address of the Citrix Netscaler appliance where the certificates will be managed. Example: '192.168.1.100'.",
-                    "StorePathDescription": "Enter the path on the Citrix Netscaler appliance where the certificates are stored. Example: '/nsconfig/ssl/'."
+                    "ClientMachineDescription": "The IP address of the Citrix ADC appliance where the certificates will be managed. Example: '192.168.1.100'.",
+                    "StorePathDescription": "The path on the Citrix ADC appliance where the certificates are stored. Example: '/nsconfig/ssl/'."
                 }
             ]
         }
