@@ -1,125 +1,70 @@
 {
-  "$schema": "https://keyfactor.github.io/integration-manifest-schema.json",
-  "integration_type": "orchestrator",
-  "name": "Citrix Netscaler Universal Orchestrator",
-  "status": "production",
-  "link_github": true,
-  "update_catalog": true,
-  "support_level": "kf-supported",
-  "release_dir": "CitrixAdcOrchestratorJobExtension/bin/Release/netcoreapp3.1",
-  "description": "Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store.",
-  "about": {
-    "orchestrator": {
-      "UOFramework": "10.1",
-      "pam_support": true,
-      "keyfactor_platform_version": "9.10",
-      "win": {
-        "supportsCreateStore": false,
-        "supportsDiscovery": false,
-        "supportsManagementAdd": true,
-        "supportsManagementRemove": true,
-        "supportsReenrollment": false,
-        "supportsInventory": true,
-        "platformSupport": "Unused"
-      },
-      "linux": {
-        "supportsCreateStore": false,
-        "supportsDiscovery": false,
-        "supportsManagementAdd": true,
-        "supportsManagementRemove": true,
-        "supportsReenrollment": false,
-        "supportsInventory": true,
-        "platformSupport": "Unused"
-      },
-      "store_types": {
-        "CitrixAdc": {
-          "Name": "CitrixAdc",
-          "ShortName": "CitrixAdc",
-          "Capability": "CitrixAdc",
-          "LocalStore": false,
-          "SupportedOperations": {
-            "Add": true,
-            "Create": false,
-            "Discovery": false,
-            "Enrollment": false,
-            "Remove": true
-          },
-          "Properties": [
-            {
-              "Name": "ServerUsername",
-              "DisplayName": "Server Username",
-              "Type": "Secret",
-              "DependsOn": null,
-              "DefaultValue": null,
-              "Required": false
+    "$schema": "/Users/hroszell/coding/dev/staff-tools/keyfactor.github.io/v2/integration-manifest-schema.json",
+    "integration_type": "orchestrator",
+    "name": "Citrix Netscaler Universal Orchestrator",
+    "status": "production",
+    "link_github": true,
+    "update_catalog": true,
+    "support_level": "kf-supported",
+    "release_dir": "CitrixAdcOrchestratorJobExtension/bin/Release/netcoreapp3.1",
+    "description": "Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store.",
+    "about": {
+        "orchestrator": {
+            "UOFramework": "10.1",
+            "pam_support": true,
+            "keyfactor_platform_version": "9.10",
+            "win": {
+                "supportsCreateStore": false,
+                "supportsDiscovery": false,
+                "supportsManagementAdd": true,
+                "supportsManagementRemove": true,
+                "supportsReenrollment": false,
+                "supportsInventory": true,
+                "platformSupport": "Unused"
             },
-            {
-              "Name": "ServerPassword",
-              "DisplayName": "Server Password",
-              "Type": "Secret",
-              "DependsOn": null,
-              "DefaultValue": null,
-              "Required": false
+            "linux": {
+                "supportsCreateStore": false,
+                "supportsDiscovery": false,
+                "supportsManagementAdd": true,
+                "supportsManagementRemove": true,
+                "supportsReenrollment": false,
+                "supportsInventory": true,
+                "platformSupport": "Unused"
             },
-            {
-              "Name": "ServerUseSsl",
-              "DisplayName": "Use SSL",
-              "Type": "Bool",
-              "DependsOn": null,
-              "DefaultValue": "true",
-              "Required": true
-            },
-            {
-              "Name": "linkToIssuer",
-              "DisplayName": "Link To Issuer",
-              "Type": "Bool",
-              "DependsOn": null,
-              "DefaultValue": "false",
-              "Required": false
-            }
-          ],
-          "EntryParameters": [
-            {
-              "Name": "virtualServerName",
-              "DisplayName": "Virtual Server Name",
-              "Type": "String",
-              "RequiredWhen": {
-                "HasPrivateKey": false,
-                "OnAdd": false,
-                "OnRemove": false,
-                "OnReenrollment": false
-              }
-            },
-            {
-              "Name": "sniCert",
-              "DisplayName": "SNI Cert",
-              "Type": "String",
-              "RequiredWhen": {
-                "HasPrivateKey": false,
-                "OnAdd": true,
-                "OnRemove": false,
-                "OnReenrollment": false
-              },
-              "DefaultValue": "FALSE"
-            }
-          ],
-          "PasswordOptions": {
-            "EntrySupported": false,
-            "StoreRequired": false,
-            "Style": "Default"
-          },
-          "PrivateKeyAllowed": "Required",
-          "JobProperties": [
-            "virtualServerName",
-            "sniCert"
-          ],
-          "ServerRequired": true,
-          "PowerShell": false,
-          "BlueprintAllowed": false,
-          "CustomAliasAllowed": "Required",
-          "InventoryEndpoint": "/AnyInventory/Update"
+            "store_types": [
+                {
+                    "Name": "CitrixAdc",
+                    "ShortName": "CitrixAdc",
+                    "Capability": "CitrixAdc",
+                    "LocalStore": false,
+                    "SupportedOperations": {
+                        "Add": true,
+                        "Create": false,
+                        "Discovery": false,
+                        "Enrollment": false,
+                        "Remove": true
+                    },
+                    "Properties": [],
+                    "EntryParameters": [],
+                    "PasswordOptions": {
+                        "EntrySupported": false,
+                        "StoreRequired": false,
+                        "Style": "Default"
+                    },
+                    "PrivateKeyAllowed": "Required",
+                    "JobProperties": [
+                        "virtualServerName",
+                        "sniCert"
+                    ],
+                    "ServerRequired": true,
+                    "PowerShell": false,
+                    "BlueprintAllowed": false,
+                    "CustomAliasAllowed": "Required",
+                    "InventoryEndpoint": "/AnyInventory/Update",
+                    "ClientMachineDescription": "Enter the IP address of the Citrix Netscaler appliance where the certificates will be managed. Example: '192.168.1.100'.",
+                    "StorePathDescription": "Enter the path on the Citrix Netscaler appliance where the certificates are stored. Example: '/nsconfig/ssl/'."
+                }
+            ]
         }
-      }
     }
-  }
 }
