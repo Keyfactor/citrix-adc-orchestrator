@@ -733,7 +733,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     try
                     {
                         var fileNameWithoutExtension = fileLocation;
-                        if (fileLocation.EndsWith(".crt",StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".pem", StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".pfx", StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".cert", StringComparison.CurrentCultureIgnoreCase) || fileLocation.EndsWith(".der", StringComparison.CurrentCultureIgnoreCase))
+                        if (fileLocation.EndsWith(".crt",StringComparison.CurrentCultureIgnoreCase) || 
+                            fileLocation.EndsWith(".cer", StringComparison.CurrentCultureIgnoreCase) || 
+                            fileLocation.EndsWith(".pem", StringComparison.CurrentCultureIgnoreCase) || 
+                            fileLocation.EndsWith(".pfx", StringComparison.CurrentCultureIgnoreCase) || 
+                            fileLocation.EndsWith(".cert", StringComparison.CurrentCultureIgnoreCase) || 
+                            fileLocation.EndsWith(".der", StringComparison.CurrentCultureIgnoreCase))
                         {
                             fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
                         }
