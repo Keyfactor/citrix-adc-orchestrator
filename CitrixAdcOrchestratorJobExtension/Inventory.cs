@@ -77,6 +77,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         private JobResult ProcessJob(CitrixAdcStore store, InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
         {
             _logger.LogDebug("Begin New Bindings Fix Inventory...");
+            _logger.LogTrace($"##### ClientMachine: {jobConfiguration.CertificateStoreDetails.ClientMachine}");
+            _logger.LogTrace($"##### StorePath:{jobConfiguration.CertificateStoreDetails.StorePath}");
 
             List<CurrentInventoryItem> inventory = new List<CurrentInventoryItem>();
 
@@ -99,6 +101,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 //create a lookup by cert(alias) for certkey identifier
                 Dictionary<string, string> keyPairMap = keyPairList.ToDictionary(i => i.cert, i => i.certkey);
 
+                foreach (KeyValuePair<string, string> keyPair in keyPairMap)
+                    _logger.LogTrace($"##### keyPairMap item: Key:{keyPair.Key}, Value:{keyPair.Value}");
+
                 _logger.LogDebug("For each file get contents by alias...");
                 foreach (string s in contentsToCheck)
                 {
@@ -107,22 +112,30 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                     if (x == null) continue;
 
+                    _logger.LogTrace($"##### privateKeyEntry: {privateKeyEntry.ToString()}");
                     if (!privateKeyEntry)
                     {
                         var certKey = keyPairList.FirstOrDefault(p => p.cert == s);
+                        _logger.LogTrace($"##### certKey: {certKey}");
                         privateKeyEntry = certKey != null && !string.IsNullOrEmpty(certKey.key);
                     }
+                    _logger.LogTrace($"##### privateKeyEntry: {privateKeyEntry.ToString()}");
 
                     processedAliases.Add(s);
 
                     Dictionary<string, object> parameters = new Dictionary<string, object>();
 
-                    var containsKeyWithPath = keyPairMap.ContainsKey(store.StorePath + "/" + s);
+                    string tempStorePath = store.StorePath.Substring(store.StorePath.Length-1,1) == "/" ? store.StorePath : store.StorePath + "/";
+                    var containsKeyWithPath = keyPairMap.ContainsKey(tempStorePath + s);
                     var containsKey = keyPairMap.ContainsKey(s);
+
+                    _logger.LogTrace($"##### containsKeyWithPath: {containsKeyWithPath.ToString()}");
+                    _logger.LogTrace($"##### containsKey: {containsKey.ToString()}");
+
 
                     if (containsKey || containsKeyWithPath)
                     {
-                        var keyPairName = containsKeyWithPath ? keyPairMap[store.StorePath + "/" + s] : keyPairMap[s];
+                        var keyPairName = containsKeyWithPath ? keyPairMap[tempStorePath + s] : keyPairMap[s];
 
                         _logger.LogDebug($"Found keyPairName: {keyPairName}");
                         parameters.Add("keyPairName", keyPairName);
