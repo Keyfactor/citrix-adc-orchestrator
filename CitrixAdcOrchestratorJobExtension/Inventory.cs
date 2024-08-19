@@ -21,6 +21,8 @@ using System.Security.Cryptography.X509Certificates;
 using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Extensions.Interfaces;
 
+using com.citrix.netscaler.nitro.resource.config.ssl;
+
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
     // ReSharper disable once InconsistentNaming
@@ -84,30 +86,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             try
             {
-                _logger.LogDebug("Getting file list...");
-                var files = store.ListFiles();
+                _logger.LogDebug("Getting certificate list...");
+                sslcertkey[] certificates = store.GetCertificates();
+                _logger.LogDebug($"Found {certificates.Length} certificate results...");
 
-                ///////Dictionary<string, string> existing = jobConfiguration.LastInventory.ToDictionary(i => i.Alias, i => i.Thumbprints.First());
-                // ReSharper disable once CollectionNeverQueried.Local
-                HashSet<string> processedAliases = new HashSet<string>();
-
-                //union the remote keys + last Inventory
-                List<String> contentsToCheck = files?.Select(x => x.filename).ToList() ?? new List<string>();
-
-                _logger.LogDebug("Getting KeyPair list...");
-                var keyPairList = store.ListKeyPairs();
-                _logger.LogDebug($"Found {keyPairList.Length} KeyPair results...");
-
-                //create a lookup by cert(alias) for certkey identifier
-                Dictionary<string, string> keyPairMap = keyPairList.ToDictionary(i => i.cert, i => i.certkey);
-
-                foreach (KeyValuePair<string, string> keyPair in keyPairMap)
-                    _logger.LogTrace($"##### keyPairMap item: Key:{keyPair.Key}, Value:{keyPair.Value}");
-
-                _logger.LogDebug("For each file get contents by alias...");
-                foreach (string s in contentsToCheck)
+                _logger.LogDebug("For each certificate...");
+                foreach (sslcertkey certificate in certificates)
                 {
-                    _logger.LogDebug($"Checking alias (filename): {s}");
+                    _logger.LogDebug($"Retrieving certificate file: {certificate.cert} for alias {certificate.certkey}");
                     X509Certificate2 x = store.GetX509Certificate(s, out bool privateKeyEntry);
 
                     if (x == null) continue;
