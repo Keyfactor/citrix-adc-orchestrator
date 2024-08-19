@@ -759,120 +759,52 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             Logger.MethodEntry(LogLevel.Debug);
 
-            systemfile f;
-            string[] privateKeyDelims = new string[3] { "-----BEGIN RSA PRIVATE KEY-----", "-----BEGIN PRIVATE KEY-----", "-----BEGIN ENCRYPTED PRIVATE KEY-----" };
-
             string certString = null;
-            string keyString = null;
+            X509Certificate2 x509Cert = null;
 
             try
             {
-                Logger.LogTrace($"Trying GetSystemFile(fileLocation): {fileLocation}");
-                f = GetSystemFile(fileLocation);
-                Logger.LogTrace($"Finished GetSystemFile(fileLocation): {fileLocation}");
-            }
-            catch
-            {
-                Logger.LogError("Error Occurred in GetSystemFile(fileLocation)");
-                hasKey = false;
-                return null;
-            }
+                Logger.LogTrace($"Trying GetSystemFile(fileLocation): {certificate.cert}");
+                systemfile f = GetSystemFile(certificate.cert);
+                Logger.LogTrace($"Finished GetSystemFile(fileLocation): {certificate.cert}");
 
-            //Ignore Directories
-            if (f.filemode != null && f.filemode[0].ToUpper() == "DIRECTORY")
-            {
-                hasKey = false;
-                return null;
-            }
-
-            // Determine if it's a cert
-            X509Certificate2 x = null;
-            try
-            {
                 var b = Convert.FromBase64String(f.filecontent);
                 var fileString = Encoding.Default.GetString(b);
 
-                // Check if private key is included with certificate
-                var privateKeyIdx = -1;
-                foreach(string privateKeyDelim in privateKeyDelims)
+                string endDelim = "-----END CERTIFICATE-----";
+                int startIdx = fileString.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal);
+                int endIdx = fileString.IndexOf(endDelim, StringComparison.Ordinal);
+
+                if (startIdx == -1 || endIdx == -1)
                 {
-                    if (fileString.IndexOf(privateKeyDelim, StringComparison.Ordinal) >= 0)
-                        privateKeyIdx = Array.IndexOf(privateKeyDelims, privateKeyDelim);
+                    Logger.LogWarning($"Certificate {certificate.certkey} does not contain a valid PEM formatted certificate");
                 }
-                
-                var containsCert = fileString.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal) >= 0;
 
-                Logger.LogTrace($"containsKey: {privateKeyIdx > -1} containsCert: {containsCert}");
-
-                if (containsCert && privateKeyIdx > -1)
-                {
-                    Logger.LogTrace($"File contains certificate and key: {fileLocation}");
-
-                    var keyStart = fileString.IndexOf(privateKeyDelims[privateKeyIdx], StringComparison.Ordinal);
-                    var keyEnd = fileString.IndexOf(privateKeyDelims[privateKeyIdx].Replace("BEGIN","END"), StringComparison.Ordinal) +
-                                 privateKeyDelims[privateKeyIdx].Replace("BEGIN", "END").Length;
-
-                    // check if need to remove new line
-                    keyString = fileString.Substring(keyStart, keyEnd - keyStart);
-                    certString = fileString.Remove(keyStart, keyEnd - keyStart);
-                }
-                else if (containsCert)
-                {
-                    Logger.LogTrace("containsCert");
-                    certString = fileString;
-                    // check .key file
-                    try
-                    {
-                        var fileNameWithoutExtension = fileLocation;
-                        if (fileLocation.EndsWith(".crt",StringComparison.CurrentCultureIgnoreCase) || 
-                            fileLocation.EndsWith(".cer", StringComparison.CurrentCultureIgnoreCase) || 
-                            fileLocation.EndsWith(".pem", StringComparison.CurrentCultureIgnoreCase) || 
-                            fileLocation.EndsWith(".pfx", StringComparison.CurrentCultureIgnoreCase) || 
-                            fileLocation.EndsWith(".cert", StringComparison.CurrentCultureIgnoreCase) || 
-                            fileLocation.EndsWith(".der", StringComparison.CurrentCultureIgnoreCase))
-                        {
-                            fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileLocation);
-                        }
-                        var keyFile = GetSystemFile(fileNameWithoutExtension + ".key");
-                        keyString = Encoding.UTF8.GetString(Convert.FromBase64String(keyFile.filecontent));
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.LogError("Unable to evaluate private key - " + LogHandler.FlattenException(e));
-                    }
-                }
+                certString = fileString.Substring(startIdx, endIdx - startIdx + endDelim.Length);
 
                 if (certString == null)
                 {
-                    hasKey = false;
                     return null;
                 }
 
                 try
                 {
-                    x = ReadX509Certificate(certString);
+                    x509Cert = ReadX509Certificate(certString);
                 }
                 catch (Exception e)
                 {
-                    // Not a certificate file
-                    Logger.LogError($"Error reading x509Certificate at {fileLocation}");
-                    Logger.LogError(LogHandler.FlattenException(e));
-                    hasKey = false;
+                    Logger.LogError($"Error reading converting {certificate.certkey} to X509 certificate format: {LogHandler.FlattenException(e)}");
                     return null;
                 }
-
-                hasKey = !string.IsNullOrEmpty(keyString);
             }
             catch (Exception e)
             {
                 // Not a certificate file
-                Logger.LogError($"{fileLocation} is not a certificate");
-                Logger.LogError(LogHandler.FlattenException(e));
-                hasKey = false;
+                Logger.LogError($"Error reading/processing certificate {certificate.certkey}: {LogHandler.FlattenException(e)}");
             }
 
             Logger.MethodExit(LogLevel.Debug);
-            return x;
+            return x509Cert;
         }
 
         private systemfile GetSystemFile(string fileName)

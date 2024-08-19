@@ -170,7 +170,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             {
                                 //PerformRenewal
                                 //1. Get All Keys /config/sslcertkey store.ListKeyPairs()
-                                var keyPairList = store.ListKeyPairs();
+                                var keyPairList = store.GetCertificates();
 
                                 _logger.LogTrace($"KeyPairList: {JsonConvert.SerializeObject(keyPairList)}");
 
@@ -178,9 +178,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                 foreach (var kp in keyPairList)
                                 {
                                     //4. Open the file and check the thumbprint
-                                    var x = store.GetX509Certificate(
-                                        kp.cert.Substring(kp.cert.LastIndexOf("/", StringComparison.Ordinal) + 1),
-                                        out _);
+                                    var x = store.GetX509Certificate(kp);
                                     
                                     //5. If the Thumbprint matches the cert renewed from KF then PerformAdd With Overwrite 
                                     if (x?.Thumbprint == _thumbprint)
