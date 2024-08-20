@@ -22,6 +22,7 @@ using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Extensions.Interfaces;
 
 using com.citrix.netscaler.nitro.resource.config.ssl;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -78,9 +79,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private JobResult ProcessJob(CitrixAdcStore store, InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
         {
-            _logger.LogDebug("Begin New Bindings Fix Inventory...");
-            _logger.LogTrace($"##### ClientMachine: {jobConfiguration.CertificateStoreDetails.ClientMachine}");
-            _logger.LogTrace($"##### StorePath:{jobConfiguration.CertificateStoreDetails.StorePath}");
+            _logger.LogDebug($"Begin {jobConfiguration.Capability} for job id {jobConfiguration.JobId}...");
+            _logger.MethodEntry(LogLevel.Debug);
 
             List<CurrentInventoryItem> inventory = new List<CurrentInventoryItem>();
 
@@ -156,6 +156,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     FailureMessage = "Error while performing certificate Inventory" + ex.Message
                 };
             }
+            finally
+            {
+                _logger.MethodExit(LogLevel.Debug);
+            }
 
             try
             {
@@ -183,6 +187,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     JobHistoryId = jobConfiguration.JobHistoryId,
                     FailureMessage = "Failure while submitting certificate Inventory"
                 };
+            }
+            finally
+            {
+                _logger.MethodExit(LogLevel.Debug);
             }
         }
     }

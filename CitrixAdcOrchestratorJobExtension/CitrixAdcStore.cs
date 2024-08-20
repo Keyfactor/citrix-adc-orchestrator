@@ -834,7 +834,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public bool IsDuplicateCertificate(string alias)
+        public bool AliasExists(string alias)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
