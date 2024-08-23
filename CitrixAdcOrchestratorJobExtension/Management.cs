@@ -185,12 +185,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             _logger.MethodEntry(LogLevel.Debug);
             
-            var (pemFile, privateKeyFile) =
-                store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, cert.Alias, overwrite);
-            
             _logger.LogDebug("Updating keyPair");
-            //update KeyPair
-            keyPairName = store.UpdateKeyPair(alias, keyPairName, pemFile, privateKeyFile);
+            keyPairName = store.UpdateKeyPair(cert.Alias, pemFile, privateKeyFile);
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings

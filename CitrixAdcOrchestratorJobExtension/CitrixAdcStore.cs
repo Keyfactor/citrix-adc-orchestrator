@@ -63,7 +63,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 Logger.MethodEntry(LogLevel.Debug);
 
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
-                StorePath = config.CertificateStoreDetails.StorePath;
+                StorePath = StripTrailingSlash(config.CertificateStoreDetails.StorePath);
                 var o = new systemfile_args();
                 _useSsl = config.UseSSL;
                 _username = serverUserName;
@@ -96,7 +96,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 Logger.MethodEntry(LogLevel.Debug);
 
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
-                StorePath = config.CertificateStoreDetails.StorePath;
+                StorePath = StripTrailingSlash(config.CertificateStoreDetails.StorePath);
                 _useSsl = config.UseSSL;
                 _username = serverUserName;
                 _password = serverPassword;
@@ -241,129 +241,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string pwd,
-            string alias, bool overwrite)
-        {
-            Logger.MethodEntry(LogLevel.Debug);
-
-            try
-            {
-                var (pemFile, privateKeyFile) = GetPem(contents, pwd, alias);
-
-                Logger.LogTrace("Starting UploadFile(pemFile,overwrite) call");
-                //upload certificate
-                UploadFile(pemFile, overwrite);
-                Logger.LogTrace("Finishing UploadFile(pemFile,overwrite) call");
-
-
-                //upload private key
-                if (privateKeyFile != null)
-                {
-                    Logger.LogTrace("PrivateKeyFile is not null so uploading private key");
-                    //we default overwrite private key as certificate upload has already succeeded and this file needs to be in sync
-                    UploadFile(privateKeyFile, true);
-                    Logger.LogTrace("Finished Uploading Private Key");
-                }
-
-                return (pemFile, privateKeyFile);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError($"Error in UploadCertificate(): {LogHandler.FlattenException(e)}");
-                throw;
-            }
-            finally
-            {
-                Logger.MethodExit(LogLevel.Debug);
-            }
-        }
-
-        private void UploadFile(systemfile f, bool overwrite)
-        {
-            Logger.MethodEntry(LogLevel.Debug);
-
-            try
-            {
-                Logger.LogDebug($"File Content: {JsonConvert.SerializeObject(f)}");
-                Logger.LogTrace("Trying to add File");
-                var _ = systemfile.add(_nss, f);
-                Logger.LogTrace("File Added");
-            }
-            catch (nitro_exception ne)
-            {
-                Logger.LogTrace($"Nitro Exception Occured {ne.Message}");
-                // ReSharper disable once SuspiciousTypeConversion.Global
-                if ((ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists"))
-                    && overwrite)
-                {
-                    var fOld = new systemfile
-                    {
-                        filename = f.filename,
-                        filelocation = f.filelocation
-                    };
-                    Logger.LogDebug($"Old File Content: {JsonConvert.SerializeObject(fOld)}");
-                    systemfile.delete(_nss, fOld);
-                    systemfile.add(_nss, f);
-                }
-                else
-                {
-                    Logger.LogError("Unexpected Nitro Error Occurred");
-                    throw;
-                }
-            }
-            finally
-            {
-                Logger.MethodExit(LogLevel.Debug);
-            }
-        }
-
-        public base_response DeleteFile(string alias)
-        {
-            Logger.MethodEntry(LogLevel.Debug);
-
-            try
-            {
-                Logger.LogTrace($"alias: {alias} storePath: {StorePath}");
-                var f = new systemfile
-                {
-                    filename = alias,
-                    filelocation = StorePath
-                };
-                Logger.LogDebug("Exiting DeleteFile() Method...");
-                return DeleteFile(f);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(
-                    $"Error Occurred in DeleteFile(string contents, string alias): {LogHandler.FlattenException(e)}");
-                throw;
-            }
-            finally
-            {
-                Logger.MethodExit(LogLevel.Debug);
-            }
-        }
-
-        private base_response DeleteFile(systemfile f)
-        {
-            Logger.MethodEntry(LogLevel.Debug);
-
-            try
-            {
-                Logger.LogTrace($"Deleting certificate at {f.filelocation}/{f.filename}");
-                return systemfile.delete(_nss, f);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError($"Error Occurred in DeleteFile(): {LogHandler.FlattenException(e)}");
-                throw;
-            }
-            finally
-            {
-                Logger.MethodExit(LogLevel.Debug);
-            }
-        }
-
         public base_response DeleteKeyPair(sslcertkey f)
         {
             Logger.MethodEntry(LogLevel.Debug);
@@ -412,57 +289,39 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        private string UpdateKeyPair(string keyPairName, string certPath, string keyPath)
+        public string UpdateKeyPair(string keyPairName, string certFileName, string keyFileName)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
             try
             {
-                Logger.LogTrace($"keyPairName: {keyPairName} certPath:{certPath} keyPath{keyPath}");
+                Logger.LogTrace($"keyPairName: {keyPairName} certFileName:{certFileName} keyFileName{keyFileName}");
+
+                sslcertkey certKeyObject = new sslcertkey()
+                {
+                    certkey = keyPairName,
+                    cert = certFileName,
+                    key = keyFileName,
+                    inform = "PEM",
+                    nodomaincheck = true,
+                    passplain = "0",
+                    password = false
+                };
+                
                 var filters = new filtervalue[1];
                 filters[0] = new filtervalue("certKey", keyPairName);
-                Logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {keyPairName}");
                 var count = sslcertkey.count_filtered(_nss, filters);
-                Logger.LogTrace($"Count of certkey with {keyPairName}: {count}");
 
                 if (count > 0)
                 {
-                    var result = new sslcertkey
-                    {
-                        certkey = keyPairName,
-                        cert = certPath
-                    };
-
-                    Logger.LogTrace($"result: {JsonConvert.SerializeObject(result)}");
-                    keyPath = certPath + ".key";
-                    Logger.LogTrace($"keyPath: {keyPath}");
-
-                    //Existing keypair exists
-                    result.key = keyPath;
-                    result.inform = "PEM";
-                    result.nodomaincheck = true;
-
                     Logger.LogTrace($"Updating certificate-key pair with name {keyPairName}");
-                    var _ = sslcertkey.change(_nss, result);
-                    var unused = sslcertkey.update(_nss, result);
+                    var _ = sslcertkey.change(_nss, certKeyObject);
+                    var unused = sslcertkey.update(_nss, certKeyObject);
                 }
                 else
                 {
-                    var s = new sslcertkey
-                    {
-                        certkey = keyPairName,
-                        cert = certPath
-                    };
-                    if (keyPath != null)
-                    {
-                        s.key = keyPath;
-                        s.password = false;
-                        s.passplain = "0"; // Unused, but required, dummy variable
-                    }
-
                     Logger.LogTrace($"Adding certificate-key pair with name {keyPairName}");
-                    sslcertkey.add(_nss, s);
-                    Logger.LogTrace($"Finished Adding certificate-key pair with name {keyPairName}");
+                    sslcertkey.add(_nss, certKeyObject);
                 }
             }
             catch (nitro_exception ne)
@@ -487,55 +346,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             Logger.MethodExit(LogLevel.Debug);
             return keyPairName;
-        }
-
-        public string UpdateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey)
-        {
-            Logger.MethodEntry(LogLevel.Debug);
-
-            try
-            {
-                Logger.LogTrace($"alias: {alias} keyPairName: {keyPairName}");
-
-                var certPath = StorePath + "/" + keyPairName;
-                Logger.LogTrace($"certPath: {certPath}");
-
-                //see if keypair already exists, if it does then we have to generate a new name to prevent downtime
-                Logger.LogTrace($"keyPairName: {keyPairName} certPath:{certPath} checking if already exists.");
-
-                if (string.IsNullOrWhiteSpace(keyPairName))
-                {
-                    Logger.LogTrace("string.IsNullOrWhiteSpace(keyPairName) is True");
-                    var existingKeyPair = FindKeyPairByCertPath(certPath);
-                    Logger.LogTrace($"existingKeyPair: {existingKeyPair}");
-                    if (existingKeyPair != null)
-                    {
-                        Logger.LogTrace($"existingKeyPair not Null: {existingKeyPair}");
-                        keyPairName = existingKeyPair;
-                    }
-                    else
-                    {
-                        keyPairName = GenerateKeyPairName(alias);
-                    }
-                }
-
-                string keyPath = null;
-                if (privateKey != null) keyPath = StorePath + "/" + alias + ".key";
-                Logger.LogTrace($"keyPath: {keyPath}");
-                Logger.LogDebug(
-                    "Exiting UpdateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey) Method...");
-                return UpdateKeyPair(keyPairName, certPath, keyPath);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(
-                    $"Error Occurred in UpdateKeyPair(string alias, string keyPairName, systemfile pemFile, systemfile privateKey): {LogHandler.FlattenException(e)}");
-                throw;
-            }
-            finally
-            {
-                Logger.MethodExit(LogLevel.Debug);
-            }
         }
 
         public sslvserver_sslcertkey_binding[] GetBindingByVServer(string vServerName)
@@ -834,6 +644,109 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
+        public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string pwd,
+            string alias, bool overwrite)
+        {
+            try
+            {
+                Logger.LogDebug("Entering UploadCertificate() Method...");
+                var (pemFile, privateKeyFile) = GetPem(contents, pwd, alias);
+
+                Logger.LogTrace("Starting UploadFile(pemFile,overwrite) call");
+                //upload certificate
+                UploadFile(pemFile, overwrite);
+                Logger.LogTrace("Finishing UploadFile(pemFile,overwrite) call");
+
+
+                //upload private key
+                if (privateKeyFile != null)
+                {
+                    Logger.LogTrace("PrivateKeyFile is not null so uploading private key");
+                    //we default overwrite private key as certificate upload has already succeeded and this file needs to be in sync
+                    UploadFile(privateKeyFile, true);
+                    Logger.LogTrace("Finished Uploading Private Key");
+                }
+
+                return (pemFile, privateKeyFile);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error in UploadCertificate(): {LogHandler.FlattenException(e)}");
+                throw;
+            }
+        }
+
+        private void UploadFile(systemfile f, bool overwrite)
+        {
+            Logger.LogDebug("Entering UploadFile() Method...");
+            try
+            {
+                Logger.LogDebug($"File Content: {JsonConvert.SerializeObject(f)}");
+                Logger.LogTrace("Trying to add File");
+                var _ = systemfile.add(_nss, f);
+                Logger.LogTrace("File Added");
+            }
+            catch (nitro_exception ne)
+            {
+                Logger.LogTrace($"Nitro Exception Occured {ne.Message}");
+                // ReSharper disable once SuspiciousTypeConversion.Global
+                if ((ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists"))
+                    && overwrite)
+                {
+                    var fOld = new systemfile
+                    {
+                        filename = f.filename,
+                        filelocation = f.filelocation
+                    };
+                    Logger.LogDebug($"Old File Content: {JsonConvert.SerializeObject(fOld)}");
+                    systemfile.delete(_nss, fOld);
+                    systemfile.add(_nss, f);
+                }
+                else
+                {
+                    Logger.LogError("Unexpected Nitro Error Occurred");
+                    throw;
+                }
+            }
+        }
+
+        public base_response DeleteFile(string alias)
+        {
+            try
+            {
+                Logger.LogDebug("Entering DeleteFile(string contents, string alias) Method...");
+                Logger.LogTrace($"alias: {alias} storePath: {StorePath}");
+                var f = new systemfile
+                {
+                    filename = alias,
+                    filelocation = StorePath
+                };
+                Logger.LogDebug("Exiting DeleteFile() Method...");
+                return DeleteFile(f);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(
+                    $"Error Occurred in DeleteFile(string contents, string alias): {LogHandler.FlattenException(e)}");
+                throw;
+            }
+        }
+
+        private base_response DeleteFile(systemfile f)
+        {
+            try
+            {
+                Logger.LogDebug("Entering and Exiting DeleteFile() Method...");
+                Logger.LogTrace($"Deleting certificate at {f.filelocation}/{f.filename}");
+                return systemfile.delete(_nss, f);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error Occurred in DeleteFile(): {LogHandler.FlattenException(e)}");
+                throw;
+            }
+        }
+
         public bool AliasExists(string alias)
         {
             Logger.MethodEntry(LogLevel.Debug);
@@ -895,6 +808,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 Logger.MethodExit(LogLevel.Debug);
             }
+        }
+
+        private string StripTrailingSlash(string storePath)
+        {
+            return storePath.Substring(storePath.Length - 1, 1) == "/" ? storePath.Substring(0, storePath.Length - 1) : storePath;
         }
 
         public void SaveConfiguration()
