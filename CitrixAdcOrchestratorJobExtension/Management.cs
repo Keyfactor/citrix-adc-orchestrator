@@ -186,12 +186,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             _logger.MethodEntry(LogLevel.Debug);
             
             _logger.LogDebug("Updating keyPair");
-            keyPairName = store.UpdateKeyPair(cert.Alias, pemFile, privateKeyFile);
+            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, cert.Alias, overwrite); 
+            store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename);
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
-            if (virtualServerName != null)
-                store.UpdateBindings(keyPairName, virtualServerName, sniCert);
+            if (virtualServerNames.Count > 0)
+                store.UpdateBindings(cert.Alias, virtualServerNames, sniCert);
 
             if (linkToIssuer)
             {

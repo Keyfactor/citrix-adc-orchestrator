@@ -289,7 +289,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public string UpdateKeyPair(string keyPairName, string certFileName, string keyFileName)
+        public void UpdateKeyPair(string keyPairName, string certFileName, string keyFileName)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
@@ -315,8 +315,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 if (count > 0)
                 {
                     Logger.LogTrace($"Updating certificate-key pair with name {keyPairName}");
-                    var _ = sslcertkey.change(_nss, certKeyObject);
-                    var unused = sslcertkey.update(_nss, certKeyObject);
+                    sslcertkey.update(_nss, certKeyObject);
                 }
                 else
                 {
@@ -384,50 +383,45 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return alias;
         }
 
-        public void UpdateBindings(string keyPairName, string virtualServerName, string sniCert)
+        public void UpdateBindings(string keyPairName, List<string> virtualServerNames, string sniCert)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
             try
             {
                 var sniArray = sniCert.Split(',');
+                var i = 0;
 
-                if (!string.IsNullOrWhiteSpace(virtualServerName))
+                foreach (var vsName in virtualServerNames)
                 {
-                    var i = 0;
-                    foreach (var vsName in virtualServerName.Split(","))
+                    var sniBool = false;
+                    if (!string.IsNullOrEmpty(sniCert) &&
+                        (sniArray[i].ToUpper() == "TRUE" || sniArray[i].ToUpper() == "FALSE"))
+                        sniBool = Convert.ToBoolean(sniArray[i]);
+
+                    Logger.LogTrace($"Updating binding for {vsName}");
+                    var ssb = new sslvserver_sslcertkey_binding
                     {
-                        var sniBool = false;
-                        if (!string.IsNullOrEmpty(sniCert) &&
-                            (sniArray[i].ToUpper() == "TRUE" || sniArray[i].ToUpper() == "FALSE"))
-                            sniBool = Convert.ToBoolean(sniArray[i]);
+                        certkeyname = keyPairName,
+                        vservername = vsName,
+                        snicert = sniBool
+                    };
+                    Logger.LogTrace($"Adding binding {keyPairName} for virtual server {vsName}");
 
-                        Logger.LogTrace($"Updating bindings for {virtualServerName}");
-                        //bind key-pair to vserver
-                        var ssb = new sslvserver_sslcertkey_binding
-                        {
-                            certkeyname = keyPairName,
-                            vservername = vsName,
-                            snicert = sniBool
-                        };
-                        Logger.LogTrace($"Adding binding {keyPairName} for virtual server {virtualServerName}");
+                    //Citrix Requires you do delete first when SNI with same domain or you will get a duplicate domain error
+                    var filters = new filtervalue[1];
+                    filters[0] = new filtervalue("certKeyName", keyPairName);
+                    if (sniBool && sslvserver_sslcertkey_binding.count_filtered(_nss, vsName, filters) > 0)
+                        sslvserver_sslcertkey_binding.delete(_nss, ssb);
+                    sslvserver_sslcertkey_binding.add(_nss, ssb);
 
-                        //Citrix Requires you do delete first when SNI with same domain or you will get a duplicate domain error
-                        var filters = new filtervalue[1];
-                        filters[0] = new filtervalue("certKeyName", keyPairName);
-                        if (sniBool && sslvserver_sslcertkey_binding.count_filtered(_nss, vsName, filters) > 0)
-                            sslvserver_sslcertkey_binding.delete(_nss, ssb);
-                        sslvserver_sslcertkey_binding.add(_nss, ssb);
-
-                        i++;
-                        Logger.LogDebug("Exit UpdateBindings(string keyPairName, string virtualServerName)");
-                    }
+                    i++;
                 }
             }
             catch (Exception e)
             {
                 Logger.LogError(
-                    $"Error Occurred in UpdateBindings(string keyPairName, string virtualServerName): {LogHandler.FlattenException(e)}");
+                    $"Error Occurred in UpdateBindings: {LogHandler.FlattenException(e)}");
                 throw;
             }
             finally
@@ -647,9 +641,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string pwd,
             string alias, bool overwrite)
         {
+            Logger.MethodEntry(LogLevel.Debug);
+
             try
             {
-                Logger.LogDebug("Entering UploadCertificate() Method...");
                 var (pemFile, privateKeyFile) = GetPem(contents, pwd, alias);
 
                 Logger.LogTrace("Starting UploadFile(pemFile,overwrite) call");
@@ -673,6 +668,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 Logger.LogError($"Error in UploadCertificate(): {LogHandler.FlattenException(e)}");
                 throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
             }
         }
 
