@@ -115,7 +115,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         }
 
                         PerformAdd(store, jobConfiguration.JobCertificate, virtualServerNames,
-                            jobConfiguration.Overwrite, sniCert, linkToIssuer);
+                            aliasExists, jobConfiguration.Overwrite, sniCert, linkToIssuer);
+
+                        if (ApplicationSettings.AutoSaveConfig)
+                        {
+                            _logger.LogDebug("Saving configuration...");
+                            store.SaveConfiguration();
+                        }
 
                         break;
                     case CertStoreOperationType.Remove:
@@ -158,18 +164,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 };
             }
 
-            return new JobResult
+            JobResult result = new JobResult
             {
                 Result = OrchestratorJobStatusJobResult.Success,
-                JobHistoryId = jobConfiguration.JobHistoryId,
-                FailureMessage = ""
+                JobHistoryId = jobConfiguration.JobHistoryId
             };
-
-            if (ApplicationSettings.AutoSaveConfig && result.Result == OrchestratorJobStatusJobResult.Success)
-            {
-                _logger.LogDebug("Saving configuration...");
-                store.SaveConfiguration();
-            }
 
             _logger.LogDebug("Logging out of Citrix...");
             store.Logout();
@@ -181,12 +180,23 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
         private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert,
-            List<string> virtualServerNames, bool overwrite, string sniCert, bool linkToIssuer)
+            List<string> virtualServerNames, bool aliasExists, bool overwrite, string sniCert, bool linkToIssuer)
         {
             _logger.MethodEntry(LogLevel.Debug);
-            
+
             _logger.LogDebug("Updating keyPair");
-            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, cert.Alias, overwrite); 
+
+            string certFileName = cert.Alias;
+            string keyFileName = certFileName + ".key";
+
+            if (aliasExists)
+            {
+                sslcertkey keyPair = store.GetKeyPairByName(cert.Alias);
+                certFileName = keyPair.cert;
+                keyFileName = keyPair.key;
+            }
+
+            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, certFileName, keyFileName, overwrite); 
             store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename);
 
             _logger.LogDebug("Updating cert bindings");
@@ -196,7 +206,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             if (linkToIssuer)
             {
-                store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, alias);
+                store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, cert.Alias);
             }
 
             _logger.MethodExit(LogLevel.Debug);
@@ -204,7 +214,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
         {
-            _logger.LogTrace("Enter PerformDelete");
+            _logger.MethodEntry(LogLevel.Debug);
+
             var sslKeyFile = store.GetKeyPairByName(cert.Alias);
             
             //1. Delete the Keypair
@@ -216,7 +227,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             //3. Remove directory from file name, Delete the Certificate File
             store.DeleteFile(Path.GetFileName(sslKeyFile.cert));
 
-            _logger.LogTrace("Exit PerformDelete");
+            _logger.MethodExit(LogLevel.Debug);
         }
     }
 }

@@ -325,26 +325,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             catch (nitro_exception ne)
             {
-                Logger.LogError($"Exception occured while trying to add or update {keyPairName}");
-                if ((((uint)ne.HResult).Equals(0x80138500) || ((uint)ne.HResult).Equals(0x80131500)) &&
-                    ne.Message.Contains("Resource already exists"))
-                {
-                    if (ne.Message.Contains("certkeyName Contents,"))
-                    {
-                        var start = ne.Message.IndexOf("Contents, ", StringComparison.Ordinal) + "Contents, ".Length;
-                        var end = ne.Message.IndexOf(']', start);
-                        keyPairName = ne.Message.Substring(start, end - start);
-                        Logger.LogError($"Certificate keypair already existed on as {keyPairName}");
-                    }
-                }
-                else
-                {
-                    throw;
-                }
+                Logger.LogError($"Exception occured while trying to add or update {keyPairName}.  {LogHandler.FlattenException(ne)}");
+                throw;
             }
 
             Logger.MethodExit(LogLevel.Debug);
-            return keyPairName;
         }
 
         public sslvserver_sslcertkey_binding[] GetBindingByVServer(string vServerName)
@@ -510,7 +495,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        private (systemfile, systemfile) GetPem(string contents, string pwd, string alias)
+        private (systemfile, systemfile) GetPem(string contents, string pwd, string certFileName, string keyFileName)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
@@ -529,7 +514,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     privateKeyFile = new systemfile
                     {
                         filecontent = Convert.ToBase64String(privateKey),
-                        filename = alias + ".key",
+                        filename = keyFileName,
                         filelocation = StorePath
                     };
 
@@ -541,16 +526,15 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     pemFile.filecontent = contents;
                 }
 
-                pemFile.filename = alias;
+                pemFile.filename = certFileName;
                 pemFile.filelocation = StorePath;
-                Logger.LogDebug("Exiting GetPem(string contents, string pwd, string alias)");
 
                 return (pemFile, privateKeyFile);
             }
             catch (Exception e)
             {
                 Logger.LogError(
-                    $"Error Occurred in GetPem(string contents, string pwd, string alias): {LogHandler.FlattenException(e)}");
+                    $"Error Occurred in GetPem, Cert File {certFileName}: {LogHandler.FlattenException(e)}");
                 throw;
             }
             finally
@@ -639,13 +623,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
         public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string pwd,
-            string alias, bool overwrite)
+            string certFileName, string keyFileName, bool overwrite)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
             try
             {
-                var (pemFile, privateKeyFile) = GetPem(contents, pwd, alias);
+                var (pemFile, privateKeyFile) = GetPem(contents, pwd, certFileName, keyFileName);
 
                 Logger.LogTrace("Starting UploadFile(pemFile,overwrite) call");
                 //upload certificate
@@ -703,8 +687,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 }
                 else
                 {
-                    Logger.LogError("Unexpected Nitro Error Occurred");
-                    throw;
+                    throw new Exception($"Error attempting to upload file {f.filename}");
                 }
             }
         }
