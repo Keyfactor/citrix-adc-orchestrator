@@ -606,7 +606,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 //option.set_args($"filelocation:{urlPath},filename:{fileName}");
                 option.filelocation = StorePath;
-                var f = new systemfile { filelocation = StorePath, filename = fileName };
+                var f = new systemfile { filelocation = StorePath, filename = fileName.Substring(fileName.LastIndexOf("/") + 1) };
                 var result = systemfile.get(_nss, f);
                 Logger.LogDebug("Exiting GetSystemFile(string fileName)");
                 return result;
