@@ -76,6 +76,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     case CertStoreOperationType.Add:
                         List<string> virtualServerNames = new List<string>();
+                        List<bool> sniCerts = new List<bool>();
+
                         bool aliasExists = (store.AliasExists(jobConfiguration.JobCertificate.Alias));
 
                         if (aliasExists && !jobConfiguration.Overwrite)
@@ -92,30 +94,54 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                         _logger.LogTrace($"alias: {jobConfiguration.JobCertificate.Alias} virtualServerName {virtualServerName}");
 
-                        if (aliasExists)
-                        {
-                            var binding = store.GetBinding(jobConfiguration.JobCertificate.Alias);
+                        //if (aliasExists)
+                        //{
+                        //    var binding = store.GetBinding(jobConfiguration.JobCertificate.Alias);
 
-                            _logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
-                            if (binding != null && binding?.sslcertkey_sslvserver_binding != null)
-                            {
-                                foreach (var sBinding in binding?.sslcertkey_sslvserver_binding)
-                                {
-                                    virtualServerNames.Add(sBinding.servername);
-                                }
-                            }
-                        }
-                        else
+                        //    _logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
+                        //    if (binding != null && binding?.sslcertkey_sslvserver_binding != null)
+                        //    {
+                        //        foreach (var sBinding in binding?.sslcertkey_sslvserver_binding)
+                        //        {
+                        //            virtualServerNames.Add(sBinding.servername);
+                        //            sniCerts.Add(sBinding.sn)
+                        //        }
+                        //    }
+                        //}
+                        if (!aliasExists)
                         {
                             if (!string.IsNullOrEmpty(virtualServerName))
                             {
-                                foreach (var vsName in virtualServerName.Split(","))
-                                    virtualServerNames.Add(virtualServerName);
+                                foreach (string vsName in virtualServerName.Split(","))
+                                    virtualServerNames.Add(vsName);
+                            }
+
+                            if (!string.IsNullOrEmpty(sniCert))
+                            {
+                                foreach(string sni in sniCert.Split(","))
+                                {
+                                    bool blnSni;
+                                    if (!Boolean.TryParse(sni.ToUpper(), out blnSni))
+                                    {
+                                        string errMessage = $"Invalid non boolean SNI value - {sni}";
+                                        _logger.LogError(errMessage);
+                                        throw new Exception(errMessage);
+                                    }
+
+                                    sniCerts.Add(blnSni);
+                                }
+                            }
+
+                            if (virtualServerNames.Count != sniCerts.Count)
+                            {
+                                string errMsg = $"Number of virtual server Names ({virtualServerNames.Count.ToString()}) does not match the number of SNI cert values ({sniCerts.Count.ToString()}";
+                                _logger.LogError(errMsg);
+                                throw new Exception(errMsg);
                             }
                         }
 
                         PerformAdd(store, jobConfiguration.JobCertificate, virtualServerNames,
-                            aliasExists, jobConfiguration.Overwrite, sniCert, linkToIssuer);
+                            aliasExists, jobConfiguration.Overwrite, sniCerts, linkToIssuer);
 
                         if (ApplicationSettings.AutoSaveConfig)
                         {
@@ -180,7 +206,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
         private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert,
-            List<string> virtualServerNames, bool aliasExists, bool overwrite, string sniCert, bool linkToIssuer)
+            List<string> virtualServerNames, bool aliasExists, bool overwrite, List<bool> sniCerts, bool linkToIssuer)
         {
             _logger.MethodEntry(LogLevel.Debug);
 
@@ -202,7 +228,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
             if (virtualServerNames.Count > 0)
-                store.UpdateBindings(cert.Alias, virtualServerNames, sniCert);
+                store.UpdateBindings(cert.Alias, virtualServerNames, sniCerts);
 
             if (linkToIssuer)
             {

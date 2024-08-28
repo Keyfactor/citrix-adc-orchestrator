@@ -368,22 +368,23 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return alias;
         }
 
-        public void UpdateBindings(string keyPairName, List<string> virtualServerNames, string sniCert)
+        public void UpdateBindings(string keyPairName, List<string> virtualServerNames, List<bool> sniCerts)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
             try
             {
-                var sniArray = sniCert.Split(',');
+                if (virtualServerNames.Count != sniCerts.Count)
+                {
+                    Logger.LogError($"Error attempting to perform binding.  Mismatched number of virtual server names ({virtualServerNames.Count.ToString()} and SNI values {sniCerts.Count.ToString()}.  Certificate added, but binding not performed.");
+                    return;
+                }
+
                 var i = 0;
 
-                foreach (var vsName in virtualServerNames)
+                foreach (string vsName in virtualServerNames)
                 {
-                    var sniBool = false;
-                    if (!string.IsNullOrEmpty(sniCert) &&
-                        (sniArray[i].ToUpper() == "TRUE" || sniArray[i].ToUpper() == "FALSE"))
-                        sniBool = Convert.ToBoolean(sniArray[i]);
-
+                    bool sniBool = Convert.ToBoolean(sniCerts[virtualServerNames.IndexOf(vsName)]);
                     Logger.LogTrace($"Updating binding for {vsName}");
                     var ssb = new sslvserver_sslcertkey_binding
                     {
