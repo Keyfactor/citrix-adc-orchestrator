@@ -21,6 +21,9 @@ using System.Security.Cryptography.X509Certificates;
 using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Extensions.Interfaces;
 
+using com.citrix.netscaler.nitro.resource.config.ssl;
+using static Org.BouncyCastle.Math.EC.ECCurve;
+
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
     // ReSharper disable once InconsistentNaming
@@ -76,52 +79,32 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private JobResult ProcessJob(CitrixAdcStore store, InventoryJobConfiguration jobConfiguration, SubmitInventoryUpdate submitInventoryUpdate)
         {
-            _logger.LogDebug("Begin New Bindings Fix Inventory...");
+            _logger.LogDebug($"Begin {jobConfiguration.Capability} for job id {jobConfiguration.JobId}...");
+            _logger.MethodEntry(LogLevel.Debug);
 
             List<CurrentInventoryItem> inventory = new List<CurrentInventoryItem>();
 
             try
             {
-                _logger.LogDebug("Getting file list...");
-                var files = store.ListFiles();
+                _logger.LogDebug("Getting certificate list...");
+                sslcertkey[] certificates = store.GetCertificates();
+                _logger.LogDebug($"Found {certificates.Length} certificate results...");
 
-                ///////Dictionary<string, string> existing = jobConfiguration.LastInventory.ToDictionary(i => i.Alias, i => i.Thumbprints.First());
-                // ReSharper disable once CollectionNeverQueried.Local
-                HashSet<string> processedAliases = new HashSet<string>();
-
-                //union the remote keys + last Inventory
-                List<String> contentsToCheck = files?.Select(x => x.filename).ToList() ?? new List<string>();
-
-                _logger.LogDebug("Getting KeyPair list...");
-                var keyPairList = store.ListKeyPairs();
-                _logger.LogDebug($"Found {keyPairList.Length} KeyPair results...");
-
-                //create a lookup by cert(alias) for certkey identifier
-                Dictionary<string, string> keyPairMap = keyPairList.ToDictionary(i => i.cert, i => i.certkey);
-
-                _logger.LogDebug("For each file get contents by alias...");
-                foreach (string s in contentsToCheck)
+                _logger.LogDebug("For each certificate...");
+                foreach (sslcertkey certificate in certificates)
                 {
-                    _logger.LogDebug($"Checking alias (filename): {s}");
-                    X509Certificate2 x = store.GetX509Certificate(s, out bool privateKeyEntry);
+                    _logger.LogDebug($"Retrieving certificate file: {certificate.cert} for alias {certificate.certkey}");
+                    X509Certificate2 x = store.GetX509Certificate(certificate);
 
                     if (x == null) continue;
 
-                    processedAliases.Add(s);
-
                     Dictionary<string, object> parameters = new Dictionary<string, object>();
 
-                    var containsKeyWithPath = keyPairMap.ContainsKey(store.StorePath + "/" + s);
-                    var containsKey = keyPairMap.ContainsKey(s);
-
-                    if (containsKey || containsKeyWithPath)
+                    if (certificate.key != null)
                     {
-                        var keyPairName = containsKeyWithPath ? keyPairMap[store.StorePath + "/" + s] : keyPairMap[s];
+                        parameters.Add("keyPairName", certificate.certkey);
 
-                        _logger.LogDebug($"Found keyPairName: {keyPairName}");
-                        parameters.Add("keyPairName", keyPairName);
-
-                        var binding = store.GetBinding(keyPairName);
+                        var binding = store.GetBinding(certificate.certkey);
 
                         var vserverBindings = binding?.sslcertkey_sslvserver_binding;
                         if (vserverBindings != null)
@@ -135,7 +118,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                                 foreach (string server in virtualServerName.Split(','))
                                 {
                                     var bindings = store.GetBindingByVServer(server);
-                                    var first = bindings.FirstOrDefault(b => b.certkeyname == keyPairName);
+                                    var first = bindings.FirstOrDefault(b => b.certkeyname == certificate.certkey);
                                     if (first != null) bindingsCsv += first.snicert + ",";
                                 }
                                 parameters.Add("sniCert", bindingsCsv.TrimEnd(','));
@@ -150,18 +133,16 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                     inventory.Add(new CurrentInventoryItem()
                     {
-                        Alias = s,
+                        Alias = certificate.certkey,
                         Certificates = new[] { Convert.ToBase64String(x.GetRawCertData()) },
-                        //ItemStatus = itemStatus,
-                        PrivateKeyEntry = privateKeyEntry,
+                        PrivateKeyEntry = certificate.key != null,
                         UseChainLevel = false,
                         Parameters = parameters
                     });
                 }
                 _logger.LogDebug($"Found {inventory.Count} certificates at {jobConfiguration.CertificateStoreDetails.StorePath}");
-
-
             }
+
             catch (Exception ex)
             {
                 _logger.LogError("Error performing certificate Inventory: " + ex.Message);
@@ -172,14 +153,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     Result = Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Failure,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = "Error while performing certificate Inventory"
+                    FailureMessage = "Error while performing certificate Inventory" + ex.Message
                 };
+            }
+            finally
+            {
+                _logger.MethodExit(LogLevel.Debug);
             }
 
             try
             {
                 _logger.LogDebug("Sending results back to command");
-                //Sends inventoried certificates back to KF Command
                 submitInventoryUpdate.Invoke(inventory);
 
                 _logger.LogDebug("Successfully Completed Job");
@@ -203,6 +187,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     JobHistoryId = jobConfiguration.JobHistoryId,
                     FailureMessage = "Failure while submitting certificate Inventory"
                 };
+            }
+            finally
+            {
+                _logger.MethodExit(LogLevel.Debug);
             }
         }
     }
