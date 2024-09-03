@@ -515,7 +515,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     privateKeyFile = new systemfile
                     {
                         filecontent = Convert.ToBase64String(privateKey),
-                        filename = keyFileName,
+                        filename = keyFileName.Substring(keyFileName.LastIndexOf("/") + 1),
                         filelocation = StorePath
                     };
 
@@ -527,7 +527,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     pemFile.filecontent = contents;
                 }
 
-                pemFile.filename = certFileName;
+                pemFile.filename = certFileName.Substring(certFileName.LastIndexOf("/") + 1);
                 pemFile.filelocation = StorePath;
 
                 return (pemFile, privateKeyFile);
