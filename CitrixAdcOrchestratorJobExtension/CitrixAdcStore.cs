@@ -315,6 +315,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 if (count > 0)
                 {
                     Logger.LogTrace($"Updating certificate-key pair with name {keyPairName}");
+                    sslcertkey.change(_nss, certKeyObject);
                     sslcertkey.update(_nss, certKeyObject);
                 }
                 else
