@@ -396,13 +396,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         vservername = vsName,
                         snicert = sniBool
                     };
-                    Logger.LogTrace($"Adding binding {keyPairName} for virtual server {vsName}");
+                    Logger.LogTrace($"Adding binding {keyPairName} for virtual server {vsName} and sni {sniBool.ToString()}");
 
                     //Citrix Requires you do delete first when SNI with same domain or you will get a duplicate domain error
                     var filters = new filtervalue[1];
                     filters[0] = new filtervalue("certKeyName", keyPairName);
                     if (sniBool && sslvserver_sslcertkey_binding.count_filtered(_nss, vsName, filters) > 0)
-                        sslvserver_sslcertkey_binding.delete(_nss, ssb);
+                    {
+                        Logger.LogTrace($"Removing binding for virtual server {vsName} and sni {sniBool.ToString()}");
+                        base_response response = sslvserver_sslcertkey_binding.delete(_nss, ssb);
+                        Logger.LogTrace($"Removing binding results: ErrorCode: {response.errorcode}, Message: {response.message}");
+                    }
                     sslvserver_sslcertkey_binding.add(_nss, ssb);
 
                     i++;
