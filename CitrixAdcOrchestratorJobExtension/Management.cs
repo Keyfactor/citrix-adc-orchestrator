@@ -22,6 +22,8 @@ using Newtonsoft.Json;
 using System.IO;
 using static Org.BouncyCastle.Math.EC.ECCurve;
 using com.citrix.netscaler.nitro.resource.config.pq;
+using System.Collections.Generic;
+using com.citrix.netscaler.nitro.resource.config.ssl;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -54,6 +56,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         public JobResult ProcessJob(ManagementJobConfiguration jobConfiguration)
         {
             _logger = LogHandler.GetClassLogger<Management>();
+            _logger.LogDebug($"Begin {jobConfiguration.Capability} for job id {jobConfiguration.JobId}...");
+            _logger.MethodEntry(LogLevel.Debug);
 
             ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
             ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
@@ -65,171 +69,84 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             _logger.LogDebug("Logging into Citrix...");
             store.Login();
 
-            _logger.LogDebug("Entering ProcessJob");
-            var result = ProcessJob(store, jobConfiguration);
-
-            if (ApplicationSettings.AutoSaveConfig && result.Result == OrchestratorJobStatusJobResult.Success)
-            {
-                _logger.LogDebug("Saving configuration...");
-                store.SaveConfiguration();
-            }
-
-            _logger.LogDebug("Logging out of Citrix...");
-            store.Logout();
-
-            _logger.LogDebug("Exiting ProcessJob");
-
-            return result;
-        }
-
-        private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite, string sniCert, bool linkToIssuer)
-        {
-            _logger.LogTrace("Enter performAdd");
-            var alias = cert.Alias;
-            AddBindCert(store, cert, keyPairName, virtualServerName, overwrite, alias, sniCert, linkToIssuer);
-        }
-
-        private void AddBindCert(CitrixAdcStore store, ManagementJobCertificate cert, string keyPairName,
-            string virtualServerName, bool overwrite, string alias, string sniCert, bool linkToIssuer)
-        {
-            var (pemFile, privateKeyFile) =
-                store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, alias, overwrite);
-
-            _logger.LogDebug("Updating keyPair");
-            //update KeyPair
-            keyPairName = store.UpdateKeyPair(alias, keyPairName, pemFile, privateKeyFile);
-
-            _logger.LogDebug("Updating cert bindings");
-            //update cert bindings
-            if (virtualServerName != null)
-                store.UpdateBindings(keyPairName, virtualServerName, sniCert);
-
-            if (linkToIssuer)
-            {
-                store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, keyPairName);
-            }
-        }
-
-        private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
-        {
-            _logger.LogTrace("Enter PerformDelete");
-            var sslKeyFile = store.GetKeyPairByName(cert.Alias);
-            
-            //1. Delete the Keypair
-            store.DeleteKeyPair(sslKeyFile);
-
-            //2. Remove directory from file name, Delete the Key File
-            store.DeleteFile(Path.GetFileName(sslKeyFile.key));
-
-            //3. Remove directory from file name, Delete the Certificate File
-            store.DeleteFile(Path.GetFileName(sslKeyFile.cert));
-
-            _logger.LogTrace("Exit PerformDelete");
-        }
-
-        private JobResult ProcessJob(CitrixAdcStore store, ManagementJobConfiguration jobConfiguration)
-        {
-            _logger.LogDebug("Begin Management...");
-
             try
             {
                 //Management jobs, unlike Discovery, Inventory, and ReEnrollment jobs can have 3 different purposes:
                 switch (jobConfiguration.OperationType)
                 {
                     case CertStoreOperationType.Add:
-                        var dup = store.IsDuplicateCertificate(jobConfiguration.JobCertificate.Alias);
-                        if ((dup && jobConfiguration.Overwrite) || !dup || (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint")))
+                        List<string> virtualServerNames = new List<string>();
+                        List<bool> sniCerts = new List<bool>();
+
+                        bool aliasExists = (store.AliasExists(jobConfiguration.JobCertificate.Alias));
+
+                        if (aliasExists && !jobConfiguration.Overwrite)
                         {
-                            _logger.LogDebug("Begin Add...");
-                            var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
-                            var sniCert =  (string)jobConfiguration.JobProperties["sniCert"];
+                            throw new Exception($"Alias {jobConfiguration.JobCertificate.Alias} already exists in store {jobConfiguration.CertificateStoreDetails.StorePath} and overwrite is set to False.  Please try again with overwrite set to True if you wish to replace this entry.");
+                        }
 
-                            dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
-                            var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
+                        _logger.LogDebug("Begin Add...");
+                        var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
+                        var sniCert = (string)jobConfiguration.JobProperties["sniCert"];
 
-                            //Check if Keypair name exists, if so, we need to append something to it so we don't get downtime
-                            var keyPairName = jobConfiguration.JobCertificate.Alias;
+                        dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
+                        var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
 
-                            _logger.LogTrace($"keyPairName: {keyPairName} virtualServerName {virtualServerName}");
-                            if (jobConfiguration.JobProperties.ContainsKey("RenewalThumbprint"))
+                        _logger.LogTrace($"alias: {jobConfiguration.JobCertificate.Alias} virtualServerName {virtualServerName}");
+
+                        //if (aliasExists)
+                        //{
+                        //    var binding = store.GetBinding(jobConfiguration.JobCertificate.Alias);
+
+                        //    _logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
+                        //    if (binding != null && binding?.sslcertkey_sslvserver_binding != null)
+                        //    {
+                        //        foreach (var sBinding in binding?.sslcertkey_sslvserver_binding)
+                        //        {
+                        //            virtualServerNames.Add(sBinding.servername);
+                        //            sniCerts.Add(sBinding.sn)
+                        //        }
+                        //    }
+                        //}
+                        if (!aliasExists)
+                        {
+                            if (!string.IsNullOrEmpty(virtualServerName))
                             {
-                                _thumbprint = jobConfiguration.JobProperties["RenewalThumbprint"].ToString();
-                                _logger.LogDebug($"It's a renewal with thumbprint {_thumbprint}");
+                                foreach (string vsName in virtualServerName.Split(","))
+                                    virtualServerNames.Add(vsName);
                             }
 
-                            //if there is no thumbprint from Keyfactor then it is an Add, else it is a renewal
-                            if (string.IsNullOrEmpty(_thumbprint))
+                            if (!string.IsNullOrEmpty(sniCert))
                             {
-                                _logger.LogDebug($"Begin Add/Enrollment... overwrite: {jobConfiguration.Overwrite}");
-                                PerformAdd(store, jobConfiguration.JobCertificate, keyPairName, virtualServerName,
-                                    jobConfiguration.Overwrite, sniCert, linkToIssuer);
-                                _logger.LogDebug("End Add/Enrollment...");
-                            }
-                            else
-                            {
-                                //PerformRenewal
-                                //1. Get All Keys /config/sslcertkey store.ListKeyPairs()
-                                var keyPairList = store.ListKeyPairs();
-
-                                _logger.LogTrace($"KeyPairList: {JsonConvert.SerializeObject(keyPairList)}");
-
-                                //2. For Each check the binding /config/sslcertkey_binding store.GetBinding(strKey)
-                                foreach (var kp in keyPairList)
+                                foreach(string sni in sniCert.Split(","))
                                 {
-                                    //4. Open the file and check the thumbprint
-                                    var x = store.GetX509Certificate(
-                                        kp.cert.Substring(kp.cert.LastIndexOf("/", StringComparison.Ordinal) + 1),
-                                        out _);
-                                    
-                                    //5. If the Thumbprint matches the cert renewed from KF then PerformAdd With Overwrite 
-                                    if (x?.Thumbprint == _thumbprint)
+                                    bool blnSni;
+                                    if (!Boolean.TryParse(sni.ToUpper(), out blnSni))
                                     {
-                                        _logger.LogTrace($"Thumbprint Match: {_thumbprint}");
-                                        var binding = store.GetBinding(kp.certkey);
-                                        _logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
-                                        if (binding != null)
-                                        {
-                                            if (binding?.sslcertkey_sslvserver_binding != null)
-                                            {
-                                                foreach (var sBinding in binding?.sslcertkey_sslvserver_binding)
-                                                {
-                                                    _logger.LogTrace(
-                                                        $"Starting PerformAdd Binding Name: {sBinding?.servername} kp.certkey: {kp?.certkey}");
-                                                    PerformAdd(store, jobConfiguration.JobCertificate, kp?.certkey,
-                                                        sBinding?.servername, true, sniCert, linkToIssuer);
-                                                    _logger.LogTrace(
-                                                        $"Finished PerformAdd Binding Name: {sBinding?.servername} kp.certkey: {kp?.certkey}");
-                                                }
-                                            }
-                                            else
-                                            {
-                                                _logger.LogTrace($"Renewing cert with no binding Information");
-                                                PerformAdd(store, jobConfiguration.JobCertificate, kp?.certkey, null, true, null, linkToIssuer);
-                                                _logger.LogTrace($"Finished Renewing cert with no binding Information");
-                                            }
-                                        }
-                                        else
-                                        {
-                                            _logger.LogTrace($"Renewing cert with no binding Information");
-                                            PerformAdd(store, jobConfiguration.JobCertificate, kp?.certkey,null, true, null,linkToIssuer);
-                                            _logger.LogTrace($"Finished Renewing cert with no binding Information");
-                                        }
-
+                                        string errMessage = $"Invalid non boolean SNI value - {sni}";
+                                        _logger.LogError(errMessage);
+                                        throw new Exception(errMessage);
                                     }
 
+                                    sniCerts.Add(blnSni);
                                 }
                             }
-                        }
-                        else
-                        {
-                            return new JobResult
+
+                            if (virtualServerNames.Count != sniCerts.Count)
                             {
-                                Result = OrchestratorJobStatusJobResult.Failure,
-                                JobHistoryId = jobConfiguration.JobHistoryId,
-                                FailureMessage =
-                                    $"You must use overwrite, a duplicate alias was found {jobConfiguration.JobCertificate.Alias}"
-                            };
+                                string errMsg = $"Number of virtual server Names ({virtualServerNames.Count.ToString()}) does not match the number of SNI cert values ({sniCerts.Count.ToString()}";
+                                _logger.LogError(errMsg);
+                                throw new Exception(errMsg);
+                            }
+                        }
+
+                        PerformAdd(store, jobConfiguration.JobCertificate, virtualServerNames,
+                            aliasExists, jobConfiguration.Overwrite, sniCerts, linkToIssuer);
+
+                        if (ApplicationSettings.AutoSaveConfig)
+                        {
+                            _logger.LogDebug("Saving configuration...");
+                            store.SaveConfiguration();
                         }
 
                         break;
@@ -273,12 +190,70 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 };
             }
 
-            return new JobResult
+            JobResult result = new JobResult
             {
                 Result = OrchestratorJobStatusJobResult.Success,
-                JobHistoryId = jobConfiguration.JobHistoryId,
-                FailureMessage = ""
+                JobHistoryId = jobConfiguration.JobHistoryId
             };
+
+            _logger.LogDebug("Logging out of Citrix...");
+            store.Logout();
+
+            _logger.LogDebug("Exiting ProcessJob");
+
+            _logger.MethodExit(LogLevel.Debug);
+            return result;
+        }
+
+        private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert,
+            List<string> virtualServerNames, bool aliasExists, bool overwrite, List<bool> sniCerts, bool linkToIssuer)
+        {
+            _logger.MethodEntry(LogLevel.Debug);
+
+            _logger.LogDebug("Updating keyPair");
+
+            string certFileName = cert.Alias;
+            string keyFileName = certFileName + ".key";
+
+            if (aliasExists)
+            {
+                sslcertkey keyPair = store.GetKeyPairByName(cert.Alias);
+                certFileName = keyPair.cert;
+                keyFileName = keyPair.key;
+            }
+
+            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, certFileName, keyFileName, overwrite); 
+            store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename);
+
+            _logger.LogDebug("Updating cert bindings");
+            //update cert bindings
+            if (virtualServerNames.Count > 0)
+                store.UpdateBindings(cert.Alias, virtualServerNames, sniCerts);
+
+            if (linkToIssuer)
+            {
+                store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, cert.Alias);
+            }
+
+            _logger.MethodExit(LogLevel.Debug);
+        }
+
+        private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
+        {
+            _logger.MethodEntry(LogLevel.Debug);
+
+            var sslKeyFile = store.GetKeyPairByName(cert.Alias);
+            
+            //1. Delete the Keypair
+            store.DeleteKeyPair(sslKeyFile);
+
+            //2. Remove directory from file name, Delete the Key File
+            store.DeleteFile(Path.GetFileName(sslKeyFile.key));
+
+            //3. Remove directory from file name, Delete the Certificate File
+            store.DeleteFile(Path.GetFileName(sslKeyFile.cert));
+
+            _logger.MethodExit(LogLevel.Debug);
         }
     }
 }
