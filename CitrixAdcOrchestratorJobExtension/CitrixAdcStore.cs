@@ -315,11 +315,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 if (count > 0)
                 {
                     Logger.LogTrace($"Updating certificate-key pair with name {keyPairName}");
-                    base_response chgResponse = sslcertkey.change(_nss, certKeyObject);
-                    Logger.LogDebug($"sslcertkey.change: ## Error Code ##: {chgResponse.errorcode} ## Message ##: {chgResponse.message}");
 
                     base_response updResponse = sslcertkey.update(_nss, certKeyObject);
                     Logger.LogDebug($"sslcertkey.update: ## Error Code ##: {updResponse.errorcode} ## Message ##: {updResponse.message}");
+
+                    base_response chgResponse = sslcertkey.change(_nss, certKeyObject);
+                    Logger.LogDebug($"sslcertkey.change: ## Error Code ##: {chgResponse.errorcode} ## Message ##: {chgResponse.message}");
                 }
                 else
                 {
