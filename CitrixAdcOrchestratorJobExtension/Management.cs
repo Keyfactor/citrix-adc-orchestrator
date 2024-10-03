@@ -94,20 +94,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                         _logger.LogTrace($"alias: {jobConfiguration.JobCertificate.Alias} virtualServerName {virtualServerName}");
 
-                        //if (aliasExists)
-                        //{
-                        //    var binding = store.GetBinding(jobConfiguration.JobCertificate.Alias);
-
-                        //    _logger.LogTrace($"binding: {JsonConvert.SerializeObject(binding)}");
-                        //    if (binding != null && binding?.sslcertkey_sslvserver_binding != null)
-                        //    {
-                        //        foreach (var sBinding in binding?.sslcertkey_sslvserver_binding)
-                        //        {
-                        //            virtualServerNames.Add(sBinding.servername);
-                        //            sniCerts.Add(sBinding.sn)
-                        //        }
-                        //    }
-                        //}
                         if (!aliasExists)
                         {
                             if (!string.IsNullOrEmpty(virtualServerName))
@@ -212,17 +198,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             _logger.LogDebug("Updating keyPair");
 
-            string certFileName = cert.Alias;
-            string keyFileName = certFileName + ".key";
-
-            if (aliasExists)
-            {
-                sslcertkey keyPair = store.GetKeyPairByName(cert.Alias);
-                certFileName = keyPair.cert;
-                keyFileName = keyPair.key;
-            }
-
-            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, certFileName, keyFileName, overwrite); 
+            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, cert.Alias, overwrite); 
             store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename);
 
             _logger.LogDebug("Updating cert bindings");
