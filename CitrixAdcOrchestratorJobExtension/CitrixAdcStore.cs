@@ -31,11 +31,8 @@ using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Security;
-using Org.BouncyCastle.Crypto.Paddings;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -626,7 +623,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             systemfile file = new systemfile()
             {
-                filecontent = contents,
+                filecontent = Convert.ToBase64String(Encoding.ASCII.GetBytes(contents)),
                 filelocation = StorePath,
                 filename = fileName
             };
@@ -643,7 +640,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 if ((ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists")))
                 {
                     Logger.LogTrace($"File {file.filename} already exists.  Trying again with new name.");
-                    UploadFile(alias, contents, isCertificate, fileNameSuffix + 1);
+                    file = UploadFile(alias, contents, isCertificate, fileNameSuffix + 1);
                 }
                 else
                 {
@@ -737,7 +734,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     }
 
                     // ReSharper disable once PossibleIntendedRethrow
-                    throw e;
+                    throw;
                 }
 
                 return x;
