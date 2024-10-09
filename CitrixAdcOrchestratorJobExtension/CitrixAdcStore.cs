@@ -192,7 +192,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error in ListKeyPairs(): {LogHandler.FlattenException(e)}");
+                Logger.LogError($"Error in GetKeyPairName(): {LogHandler.FlattenException(e)}");
                 throw;
             }
             finally
@@ -428,21 +428,45 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             Logger.MethodEntry(LogLevel.Debug);
 
             sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
-            if (chain.chaincomplete == 1)
-            {
-                Logger.LogDebug($"Certificate {keyPairName} already linked to {chain.chainlinked}");
-                return;
-            }
+            //if (chain.chaincomplete == 1)
+            //{
+            //    Logger.LogDebug($"Certificate {keyPairName} already linked to {chain.chainlinked}");
+            //    return;
+            //}
 
-            if (chain.chainpossiblelinks == null || string.IsNullOrEmpty(chain.chainpossiblelinks[0]) || chain.chainpossiblelinks.Length == 0)
+            if (chain.chainpossiblelinks == null || chain.chainpossiblelinks.Length == 0)
             {
                 string msg = $"Certificate added, but link not performed.  No Issuing CA Certificate exists for {keyPairName}.";
                 Logger.LogWarning(msg);
                 throw new LinkException(msg);
             }
-            
+
             sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
-            certKey.linkcertkeyname = chain.chainpossiblelinks[0];
+            string chainCertName = string.Empty;
+
+            X509Certificate2Collection x509CertCollection = new X509Certificate2Collection();
+            x509CertCollection.Import(Convert.FromBase64String(cert), privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+
+            X509Certificate2 issuingCert = x509CertCollection.First(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
+
+            foreach(string chainCertAlias in chain.chainpossiblelinks)
+            {
+                X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
+                if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                {
+                    chainCertName = chainCertAlias;
+                    break;
+                }
+            }
+
+            if (chainCertName == string.Empty)
+            {
+                string errMsg = "Issuing certificate not found in Citrix.  Link not performed.";
+                Logger.LogWarning(errMsg);
+                throw new LinkException(errMsg);
+            }
+
+            certKey.linkcertkeyname = chainCertName;
             sslcertkey.link(_nss, certKey);
 
             Logger.MethodExit(LogLevel.Debug);
