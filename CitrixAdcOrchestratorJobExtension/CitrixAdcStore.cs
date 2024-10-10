@@ -428,11 +428,24 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             Logger.MethodEntry(LogLevel.Debug);
 
             sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
-            //if (chain.chaincomplete == 1)
-            //{
-            //    Logger.LogDebug($"Certificate {keyPairName} already linked to {chain.chainlinked}");
-            //    return;
-            //}
+            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
+
+            X509Certificate2Collection x509CertCollection = new X509Certificate2Collection();
+            x509CertCollection.Import(Convert.FromBase64String(cert), privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+
+            X509Certificate2 issuingCert = x509CertCollection.First(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
+
+            if (chain.chaincomplete == 1)
+            {
+                foreach (string chainCertAlias in chain.chainlinked)
+                {
+                    X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
+                    if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                    {
+                        return;
+                    }
+                }
+            }
 
             if (chain.chainpossiblelinks == null || chain.chainpossiblelinks.Length == 0)
             {
@@ -441,15 +454,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 throw new LinkException(msg);
             }
 
-            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
             string chainCertName = string.Empty;
-
-            X509Certificate2Collection x509CertCollection = new X509Certificate2Collection();
-            x509CertCollection.Import(Convert.FromBase64String(cert), privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
-
-            X509Certificate2 issuingCert = x509CertCollection.First(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
-
-            foreach(string chainCertAlias in chain.chainpossiblelinks)
+            foreach (string chainCertAlias in chain.chainpossiblelinks)
             {
                 X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
                 if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
