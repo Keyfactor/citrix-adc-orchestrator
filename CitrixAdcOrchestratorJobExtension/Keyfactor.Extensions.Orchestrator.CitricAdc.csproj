@@ -33,7 +33,4 @@
       <HintPath>nitro.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="echo F | xcopy &quot;$(ProjectDir)config.json&quot; &quot;$(TargetDir)\config.json&quot; /Y" />
-  </Target>
 </Project>
