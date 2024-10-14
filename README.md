@@ -35,11 +35,6 @@ The Citrix ADC Orchestrator remotely manages certificate objects on the NetScale
 Load Balancing, Authentication/Authorization/Auditing (AAA), and Gateways, this orchestrator can bind to any of these virtual servers when using unique virtual server names for each service.
 
 
-### CitrixAdc
-TODO Global Store Type Section is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info
-
-
-TODO Overview is a required section
 
 ## Compatibility
 
@@ -71,21 +66,11 @@ Allow
 * Command Spec: 
 (^stat\s+(cr|cs|lb|system|vpn))|(^(add|rm|show)\s+system\s+file\s+.*)|(^\S+\s+ssl\s+.*)|(^(show|stat|sync)\s+HA\s+.*)|(^save\s+ns\s+config)|(^(switch|show)\s+ns\s+partition.*)
 
-### CitrixAdc Requirements
-TODO Global Store Type Section is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info
-
-
-TODO Requirements is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info
-
-
-
 
 ## Create the CitrixAdc Certificate Store Type
 
 To use the Citrix Netscaler Universal Orchestrator extension, you **must** create the CitrixAdc Certificate Store Type. This only needs to happen _once_ per Keyfactor Command instance.
 
-
-TODO Global Store Type Section is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info
 
 
 * **Create CitrixAdc using kfutil**:
@@ -138,6 +123,8 @@ TODO Global Store Type Section is an optional section. If this section doesn't s
     | Name | Display Name | Description | Type | Default Value/Options | Required |
     | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
     | linkToIssuer | Link To Issuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. | Bool | false | 🔲 Unchecked |
+    | ServerUsername | Server Username | The username credential for authenticating against the Citrix ADC (NetScaler) appliance. Example: admin. | Secret |  | 🔲 Unchecked |
+    | ServerPassword | Server Password | The password credential associated with the username for authenticating against the Citrix ADC (NetScaler) appliance. Example: Pa$$w0rd. | Secret |  | 🔲 Unchecked |
 
     The Custom Fields tab should look like this:
 
@@ -208,22 +195,69 @@ An optional config.json configuration file has been provided in the extensions f
 ## Defining Certificate Stores
 
 
-TODO Global Store Type Section is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info
 
-TODO Certificate Store Configuration is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info
+* **Manually with the Command UI**
+
+    <details><summary>Create Certificate Stores manually in the UI</summary>
+
+    1. **Navigate to the _Certificate Stores_ page in Keyfactor Command.**
+
+        Log into Keyfactor Command, toggle the _Locations_ dropdown, and click _Certificate Stores_.
+
+    2. **Add a Certificate Store.**
+
+        Click the Add button to add a new Certificate Store. Use the table below to populate the **Attributes** in the **Add** form.
+        | Attribute | Description |
+        | --------- | ----------- |
+        | Category | Select "CitrixAdc" or the customized certificate store name from the previous step. |
+        | Container | Optional container to associate certificate store with. |
+        | Client Machine | The DNS or IP Address of the Citrix ADC Appliance. |
+        | Store Path | The path where certificate files are located on the Citrix ADC appliance.  This value will likely be /nsconfig/ssl/ |
+        | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
+        | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+        | ServerUsername | The username credential for authenticating against the Citrix ADC (NetScaler) appliance. Example: admin. |
+        | ServerPassword | The password credential associated with the username for authenticating against the Citrix ADC (NetScaler) appliance. Example: Pa$$w0rd. |
 
 
+        
+
+    </details>
+
+* **Using kfutil**
+    
+    <details><summary>Create Certificate Stores with kfutil</summary>
+    
+    1. **Generate a CSV template for the CitrixAdc certificate store**
+
+        ```shell
+        kfutil stores import generate-template --store-type-name CitrixAdc --outpath CitrixAdc.csv
+        ```
+    2. **Populate the generated CSV file**
+
+        Open the CSV file, and reference the table below to populate parameters for each **Attribute**.
+        | Attribute | Description |
+        | --------- | ----------- |
+        | Category | Select "CitrixAdc" or the customized certificate store name from the previous step. |
+        | Container | Optional container to associate certificate store with. |
+        | Client Machine | The DNS or IP Address of the Citrix ADC Appliance. |
+        | Store Path | The path where certificate files are located on the Citrix ADC appliance.  This value will likely be /nsconfig/ssl/ |
+        | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
+        | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+        | ServerUsername | The username credential for authenticating against the Citrix ADC (NetScaler) appliance. Example: admin. |
+        | ServerPassword | The password credential associated with the username for authenticating against the Citrix ADC (NetScaler) appliance. Example: Pa$$w0rd. |
+
+
+        
+
+    3. **Import the CSV file to create the certificate stores** 
+
+        ```shell
+        kfutil stores import csv --store-type-name CitrixAdc --file CitrixAdc.csv
+        ```
+    </details>
 
 > The content in this section can be supplimented by the [official Command documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/ReferenceGuide/Certificate%20Stores.htm?Highlight=certificate%20store).
 
-
-## Discovering Certificate Stores with the Discovery Job
-
-### CitrixAdc Discovery Job
-TODO Global Store Type Section is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info
-
-
-TODO Discovery Job Configuration is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info
 
 
 
