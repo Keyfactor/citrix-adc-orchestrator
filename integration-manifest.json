@@ -75,7 +75,6 @@
             "ClientMachineDescription": "The DNS or IP Address of the Citrix ADC Appliance.",
             "StorePathDescription": "The path where certificate files are located on the Citrix ADC appliance.  This value will likely be /nsconfig/ssl/"
           }
-        }
       ]
     }
   }
