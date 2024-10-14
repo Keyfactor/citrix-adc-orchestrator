@@ -15,7 +15,6 @@
       "keyfactor_platform_version": "10.4",
       "store_types": [
         {
-          "CitrixAdc": {
             "Name": "CitrixAdc",
             "ShortName": "CitrixAdc",
             "Capability": "CitrixAdc",
@@ -41,7 +40,7 @@
                 "Name": "linkToIssuer",
                 "DisplayName": "Link To Issuer",
                 "Type": "Bool",
-                "DependsOn": null,
+                "DependsOn": "",
                 "DefaultValue": "false",
                 "Required": false,
                 "Description": "Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate."
