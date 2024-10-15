@@ -1,7 +1,7 @@
 # Citrix ADC Orchestrator Configuration
 ## Overview
 
-The Citrix ADC Orchestrator remotely manages certificates on the NetScaler device.  Since the ADC supports services including: 
+The Citrix ADC Orchestrator remotely manages certificate objects on the NetScaler device.  Since the ADC supports services including: 
 Load Balancing, Authentication/Authorization/Auditing (AAA), and Gateways, this orchestrator can bind to any of these virtual servers when using unique virtual server names for each service.
 
 ### Permissions
@@ -29,6 +29,7 @@ Allow
 	* In the Keyfactor Command Database, run the following SQL Script to update the store types and store information [Upgrade Script](https://github.com/Keyfactor/citrix-adc-orchestrator/blob/snipamupdates/UpgradeScript.sql)
 
 ### Below are specific notes and limitations
+* As of release 2.2.0, ONLY certificate objects (installed certificates) will be managed by the Citrix ADC Orchestrator Extension.  Prior versions also managed certificate/key file combinations uploaded to the Citrix ADC device but not yet installed.  This functionality has been removed due to issues attempting to match certificate and key files due to inconsistent file naming.
 
 * Direct PFX Binding Inventory
 	* In NetScaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in NetScaler is descibed in this [NetScaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
@@ -43,7 +44,7 @@ Allow
 	* As defined in Test Cases 5 and 13 below, certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server and then remove the cert using Command.  This requirement may change in a future version.
 
 * Renewals
-	* The renewal process will find the thumbprint of the cert on all VServers and renew them in all places.  See test cases #6 and #10 in the Test Cases section.
+	* The renewal process will find the thumbprint of the cert on all VServers and renew them in all places.  See test cases #6 and #10 in the Test Cases section.  Note, as of release 2.2.0, this will no longer be the case.  Certificates (certificate objects) will be renewed based on the supplied alias only.  Only the underlying system files attached to the provided alias will be replaced.
 	
 * AutoSave Config
 	* A new config.json file in the extension folder contains the 'AutoSaveConfig' flag with a default value of 'N'.  When this flag is set to 'Y', successful configuration changes made by a management job will be automatically saved to disk; no interaction with the Citrix ADC UI is necessary.
