@@ -11,7 +11,7 @@
           "Keyfactor.Extensions.Orchestrator.CitricAdc": "1.0.0",
           "Microsoft.Extensions.Logging": "6.0.0",
           "Moq.AutoMock": "3.4.0",
-          "RestSharp": "109.0.1"
+          "RestSharp": "112.1.0"
         },
         "runtime": {
           "CitrixAdcTestConsole.dll": {}
@@ -375,11 +375,11 @@
           }
         }
       },
-      "RestSharp/109.0.1": {
+      "RestSharp/112.1.0": {
         "runtime": {
           "lib/net6.0/RestSharp.dll": {
-            "assemblyVersion": "109.0.1.0",
-            "fileVersion": "109.0.1.0"
+            "assemblyVersion": "112.1.0.0",
+            "fileVersion": "112.1.0.0"
           }
         }
       },
@@ -1466,12 +1466,12 @@
       "path": "portable.bouncycastle/1.8.10",
       "hashPath": "portable.bouncycastle.1.8.10.nupkg.sha512"
     },
-    "RestSharp/109.0.1": {
+    "RestSharp/112.1.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-OkJ23uaV8qwCKuR7RKBUFlnXxIDZ7P1jEaoDawXgysujIcWZgIwE6p90kJZxY9EVv9ESjZtGlSmP8k+kOfDH9g==",
-      "path": "restsharp/109.0.1",
-      "hashPath": "restsharp.109.0.1.nupkg.sha512"
+      "sha512": "sha512-bOUGNZqhhv/QeCXHTKEUil846yBjwWXpzPKjO67kFvaAOoF361z7jLY5BMnuZ6WD2WQRA750sNMcK7MSPCQ5Mg==",
+      "path": "restsharp/112.1.0",
+      "hashPath": "restsharp.112.1.0.nupkg.sha512"
     },
     "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl/4.3.0": {
       "type": "package",
