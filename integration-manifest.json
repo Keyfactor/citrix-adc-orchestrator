@@ -1,81 +1,99 @@
 {
-  "$schema": "https://keyfactor.github.io/v2/integration-manifest-schema.json",
-  "integration_type": "orchestrator",
-  "name": "Citrix Netscaler Universal Orchestrator",
-  "status": "production",
-  "link_github": true,
-  "update_catalog": true,
-  "support_level": "kf-supported",
-  "release_dir": "CitrixAdcOrchestratorJobExtension/bin/Release",
-  "description": "Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store.",
-  "about": {
-    "orchestrator": {
-      "UOFramework": "10.4",
-      "pam_support": true,
-      "keyfactor_platform_version": "10.4",
-      "store_types": [
-        {
-            "Name": "CitrixAdc",
-            "ShortName": "CitrixAdc",
-            "Capability": "CitrixAdc",
-            "ServerRequired": true,
-            "BlueprintAllowed": false,
-            "CustomAliasAllowed": "Required",
-            "PowerShell": false,
-            "PrivateKeyAllowed": "Required",
-            "SupportedOperations": {
-              "Add": true,
-              "Create": false,
-              "Discovery": false,
-              "Enrollment": false,
-              "Remove": true
-            },
-            "PasswordOptions": {
-              "EntrySupported": false,
-              "StoreRequired": false,
-              "Style": "Default"
-            },
-            "Properties": [
-              {
-                "Name": "linkToIssuer",
-                "DisplayName": "Link To Issuer",
-                "Type": "Bool",
-                "DependsOn": "",
-                "DefaultValue": "false",
-                "Required": false,
-                "Description": "Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate."
-              }
-            ],
-            "EntryParameters": [
-              {
-                "Name": "virtualServerName",
-                "DisplayName": "Virtual Server Name",
-                "Type": "String",
-                "Description": "When adding a certificate, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values.",
-                "RequiredWhen": {
-                  "HasPrivateKey": false,
-                  "OnAdd": false,
-                  "OnRemove": false,
-                  "OnReenrollment": false
+    "$schema": "https://keyfactor.github.io/v2/integration-manifest-schema.json",
+    "integration_type": "orchestrator",
+    "name": "Citrix Netscaler Universal Orchestrator",
+    "status": "production",
+    "link_github": true,
+    "update_catalog": true,
+    "support_level": "kf-supported",
+    "release_dir": "CitrixAdcOrchestratorJobExtension/bin/Release",
+    "description": "Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store.",
+    "about": {
+        "orchestrator": {
+            "UOFramework": "10.4",
+            "pam_support": true,
+            "keyfactor_platform_version": "10.4",
+            "store_types": [
+                {
+                    "Name": "CitrixAdc",
+                    "ShortName": "CitrixAdc",
+                    "Capability": "CitrixAdc",
+                    "ServerRequired": true,
+                    "BlueprintAllowed": false,
+                    "CustomAliasAllowed": "Required",
+                    "PowerShell": false,
+                    "PrivateKeyAllowed": "Required",
+                    "SupportedOperations": {
+                        "Add": true,
+                        "Create": false,
+                        "Discovery": false,
+                        "Enrollment": false,
+                        "Remove": true
+                    },
+                    "PasswordOptions": {
+                        "EntrySupported": false,
+                        "StoreRequired": false,
+                        "Style": "Default"
+                    },
+                    "Properties": [
+                        {
+                            "Name": "linkToIssuer",
+                            "DisplayName": "Link To Issuer",
+                            "Type": "Bool",
+                            "DependsOn": "",
+                            "DefaultValue": "false",
+                            "Required": false,
+                            "Description": "Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate."
+                        },
+                        {
+                            "Name": "ServerUsername",
+                            "DisplayName": "Server Username",
+                            "Type": "Secret",
+                            "DependsOn": "",
+                            "DefaultValue": "",
+                            "Required": false,
+                            "Description": "The username credential for authenticating against the Citrix ADC (NetScaler) appliance. Example: admin."
+                        },
+                        {
+                            "Name": "ServerPassword",
+                            "DisplayName": "Server Password",
+                            "Type": "Secret",
+                            "DependsOn": "",
+                            "DefaultValue": "",
+                            "Required": false,
+                            "Description": "The password credential associated with the username for authenticating against the Citrix ADC (NetScaler) appliance. Example: Pa$$w0rd."
+                        }
+                    ],
+                    "EntryParameters": [
+                        {
+                            "Name": "virtualServerName",
+                            "DisplayName": "Virtual Server Name",
+                            "Type": "String",
+                            "Description": "When adding a certificate, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values.",
+                            "RequiredWhen": {
+                                "HasPrivateKey": false,
+                                "OnAdd": false,
+                                "OnRemove": false,
+                                "OnReenrollment": false
+                            }
+                        },
+                        {
+                            "Name": "sniCert",
+                            "DisplayName": "SNI Cert",
+                            "Type": "String",
+                            "Description": "When adding a certificate, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values.",
+                            "RequiredWhen": {
+                                "HasPrivateKey": false,
+                                "OnAdd": false,
+                                "OnRemove": false,
+                                "OnReenrollment": false
+                            }
+                        }
+                    ],
+                    "ClientMachineDescription": "The DNS or IP Address of the Citrix ADC Appliance.",
+                    "StorePathDescription": "The path where certificate files are located on the Citrix ADC appliance.  This value will likely be /nsconfig/ssl/"
                 }
-              },
-              {
-                "Name": "sniCert",
-                "DisplayName": "SNI Cert",
-                "Type": "String",
-                "Description": "When adding a certificate, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values.",
-                "RequiredWhen": {
-                  "HasPrivateKey": false,
-                  "OnAdd": false,
-                  "OnRemove": false,
-                  "OnReenrollment": false
-                }
-              }
-            ],
-            "ClientMachineDescription": "The DNS or IP Address of the Citrix ADC Appliance.",
-            "StorePathDescription": "The path where certificate files are located on the Citrix ADC appliance.  This value will likely be /nsconfig/ssl/"
-          }
-      ]
+            ]
+        }
     }
-  }
 }
