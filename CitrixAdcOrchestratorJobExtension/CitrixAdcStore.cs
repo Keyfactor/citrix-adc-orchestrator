@@ -31,10 +31,8 @@ using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Security;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -194,7 +192,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error in ListKeyPairs(): {LogHandler.FlattenException(e)}");
+                Logger.LogError($"Error in GetKeyPairName(): {LogHandler.FlattenException(e)}");
                 throw;
             }
             finally
@@ -430,27 +428,57 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             Logger.MethodEntry(LogLevel.Debug);
 
             sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
+            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
+
+            X509Certificate2Collection x509CertCollection = new X509Certificate2Collection();
+            x509CertCollection.Import(Convert.FromBase64String(cert), privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+
+            X509Certificate2 issuingCert = x509CertCollection.First(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
+
             if (chain.chaincomplete == 1)
             {
-                Logger.LogDebug($"Certificate {keyPairName} already linked to {chain.chainlinked}");
-                return;
+                foreach (string chainCertAlias in chain.chainlinked)
+                {
+                    X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
+                    if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                    {
+                        return;
+                    }
+                }
             }
 
-            if (chain.chainpossiblelinks == null || string.IsNullOrEmpty(chain.chainpossiblelinks[0]) || chain.chainpossiblelinks.Length == 0)
+            if (chain.chainpossiblelinks == null || chain.chainpossiblelinks.Length == 0)
             {
                 string msg = $"Certificate added, but link not performed.  No Issuing CA Certificate exists for {keyPairName}.";
                 Logger.LogWarning(msg);
                 throw new LinkException(msg);
             }
-            
-            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
-            certKey.linkcertkeyname = chain.chainpossiblelinks[0];
+
+            string chainCertName = string.Empty;
+            foreach (string chainCertAlias in chain.chainpossiblelinks)
+            {
+                X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
+                if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                {
+                    chainCertName = chainCertAlias;
+                    break;
+                }
+            }
+
+            if (chainCertName == string.Empty)
+            {
+                string errMsg = "Issuing certificate not found in Citrix.  Link not performed.";
+                Logger.LogWarning(errMsg);
+                throw new LinkException(errMsg);
+            }
+
+            certKey.linkcertkeyname = chainCertName;
             sslcertkey.link(_nss, certKey);
 
             Logger.MethodExit(LogLevel.Debug);
         }
 
-        private (byte[], byte[]) GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)
+        private (string, string) GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
@@ -490,61 +518,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 var certPem =
                     certStart + Pemify(Convert.ToBase64String(p.GetCertificate(alias).Certificate.GetEncoded())) +
                     certEnd;
-                Logger.LogDebug("Exiting GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)");
-                return (Encoding.ASCII.GetBytes(certPem), Encoding.ASCII.GetBytes(privateKeyString));
+                return (certPem, privateKeyString);
             }
             catch (Exception e)
             {
                 Logger.LogError(
                     $"Error Occurred in GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword): {LogHandler.FlattenException(e)}");
-                throw;
-            }
-            finally
-            {
-                Logger.MethodExit(LogLevel.Debug);
-            }
-        }
-
-        private (systemfile, systemfile) GetPem(string contents, string pwd, string certFileName, string keyFileName)
-        {
-            Logger.MethodEntry(LogLevel.Debug);
-
-            try
-            {
-                var pemFile = new systemfile();
-                systemfile privateKeyFile = null;
-
-                if (!string.IsNullOrWhiteSpace(pwd)) // PFX Entry
-                {
-                    // Load PFX
-                    var pfxBytes = Convert.FromBase64String(contents);
-                    var (certPem, privateKey) = GetPemFromPfx(pfxBytes, pwd.ToCharArray());
-
-                    // create private key file
-                    privateKeyFile = new systemfile
-                    {
-                        filecontent = Convert.ToBase64String(privateKey),
-                        filename = keyFileName.Substring(keyFileName.LastIndexOf("/") + 1),
-                        filelocation = StorePath
-                    };
-
-                    // set pem file from cert in pfx
-                    pemFile.filecontent = Convert.ToBase64String(certPem);
-                }
-                else
-                {
-                    pemFile.filecontent = contents;
-                }
-
-                pemFile.filename = certFileName.Substring(certFileName.LastIndexOf("/") + 1);
-                pemFile.filelocation = StorePath;
-
-                return (pemFile, privateKeyFile);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(
-                    $"Error Occurred in GetPem, Cert File {certFileName}: {LogHandler.FlattenException(e)}");
                 throw;
             }
             finally
@@ -633,30 +612,19 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         }
 
         public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string pwd,
-            string certFileName, string keyFileName, bool overwrite)
+            string alias, bool overwrite)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
             try
             {
-                var (pemFile, privateKeyFile) = GetPem(contents, pwd, certFileName, keyFileName);
+                var (certificate, privateKey) = GetPemFromPfx(Convert.FromBase64String(contents), pwd.ToCharArray());
 
-                Logger.LogTrace("Starting UploadFile(pemFile,overwrite) call");
-                //upload certificate
-                UploadFile(pemFile, overwrite);
-                Logger.LogTrace("Finishing UploadFile(pemFile,overwrite) call");
+                //upload certificate and key
+                systemfile certificateFile = UploadFile(alias, certificate, true, 0);
+                systemfile privateKeyFile = UploadFile(alias, privateKey, false, 0);
 
-
-                //upload private key
-                if (privateKeyFile != null)
-                {
-                    Logger.LogTrace("PrivateKeyFile is not null so uploading private key");
-                    //we default overwrite private key as certificate upload has already succeeded and this file needs to be in sync
-                    UploadFile(privateKeyFile, true);
-                    Logger.LogTrace("Finished Uploading Private Key");
-                }
-
-                return (pemFile, privateKeyFile);
+                return (certificateFile, privateKeyFile);
             }
             catch (Exception e)
             {
@@ -669,37 +637,48 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        private void UploadFile(systemfile f, bool overwrite)
+        private systemfile UploadFile(string alias, string contents, bool isCertificate, int fileNameSuffix)
         {
             Logger.LogDebug("Entering UploadFile() Method...");
+
+            if (fileNameSuffix > 50)
+            {
+                string errMessage = $"Too many attempts (50) to upload file for {alias}";
+                Logger.LogError(errMessage);
+                throw new Exception(errMessage);
+            }
+
+            string fileNameSuffixString = fileNameSuffix == 0 ? string.Empty : fileNameSuffix.ToString();
+            string fileName = alias + fileNameSuffixString + (isCertificate ? string.Empty : ".key");
+
+            systemfile file = new systemfile()
+            {
+                filecontent = Convert.ToBase64String(Encoding.ASCII.GetBytes(contents)),
+                filelocation = StorePath,
+                filename = fileName
+            };
+
             try
             {
-                Logger.LogDebug($"File Content: {JsonConvert.SerializeObject(f)}");
-                Logger.LogTrace("Trying to add File");
-                var _ = systemfile.add(_nss, f);
-                Logger.LogTrace("File Added");
+                Logger.LogTrace($"Attempting to upload file {file.filelocation}/{file.filename}");
+                var _ = systemfile.add(_nss, file);
+                Logger.LogTrace($"File {file.filename} added for {alias}");
             }
             catch (nitro_exception ne)
             {
-                Logger.LogTrace($"Nitro Exception Occured {ne.Message}");
                 // ReSharper disable once SuspiciousTypeConversion.Global
-                if ((ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists"))
-                    && overwrite)
+                if ((ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists")))
                 {
-                    var fOld = new systemfile
-                    {
-                        filename = f.filename,
-                        filelocation = f.filelocation
-                    };
-                    Logger.LogDebug($"Old File Content: {JsonConvert.SerializeObject(fOld)}");
-                    systemfile.delete(_nss, fOld);
-                    systemfile.add(_nss, f);
+                    Logger.LogTrace($"File {file.filename} already exists.  Trying again with new name.");
+                    file = UploadFile(alias, contents, isCertificate, fileNameSuffix + 1);
                 }
                 else
                 {
-                    throw new Exception($"Error attempting to upload file {f.filename}");
+                    throw new Exception($"Error attempting to upload certificate {alias} - {ne.Message}");
                 }
             }
+
+            return file;
         }
 
         public base_response DeleteFile(string alias)
@@ -785,7 +764,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     }
 
                     // ReSharper disable once PossibleIntendedRethrow
-                    throw e;
+                    throw;
                 }
 
                 return x;

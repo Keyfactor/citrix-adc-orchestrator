@@ -22,7 +22,6 @@ using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Extensions.Interfaces;
 
 using com.citrix.netscaler.nitro.resource.config.ssl;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
