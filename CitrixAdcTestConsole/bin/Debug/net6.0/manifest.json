@@ -1,0 +1,14 @@
+{
+  "extensions": {
+    "Keyfactor.Orchestrators.Extensions.IOrchestratorJobExtension": {
+      "CertStores.CitrixAdc.Inventory": {
+        "assemblypath": "Keyfactor.Extensions.Orchestrator.CitricAdc.dll",
+        "TypeFullName": "Keyfactor.Extensions.Orchestrator.CitricAdc.Inventory"
+      },
+      "CertStores.CitrixAdc.Management": {
+        "assemblypath": "Keyfactor.Extensions.Orchestrator.CitricAdc.dll",
+        "TypeFullName": "Keyfactor.Extensions.Orchestrator.CitricAdc.Management"
+      }
+    }
+  }
+}

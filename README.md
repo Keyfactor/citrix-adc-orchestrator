@@ -1,112 +1,56 @@
+<h1 align="center" style="border-bottom: none">
+    Citrix Netscaler Universal Orchestrator Extension
+</h1>
 
-# Citrix Netscaler Universal Orchestrator
-
-Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store.
-
-#### Integration status: Production - Ready for use in production environments.
-
-## About the Keyfactor Universal Orchestrator Extension
-
-This repository contains a Universal Orchestrator Extension which is a plugin to the Keyfactor Universal Orchestrator. Within the Keyfactor Platform, Orchestrators are used to manage “certificate stores” &mdash; collections of certificates and roots of trust that are found within and used by various applications.
-
-The Universal Orchestrator is part of the Keyfactor software distribution and is available via the Keyfactor customer portal. For general instructions on installing Extensions, see the “Keyfactor Command Orchestrator Installation and Configuration Guide” section of the Keyfactor documentation. For configuration details of this specific Extension see below in this readme.
-
-The Universal Orchestrator is the successor to the Windows Orchestrator. This Orchestrator Extension plugin only works with the Universal Orchestrator and does not work with the Windows Orchestrator.
-
-## Support for Citrix Netscaler Universal Orchestrator
-
-Citrix Netscaler Universal Orchestrator is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com
-
-###### To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
-
----
-
-
----
-
-
-
-## Keyfactor Version Supported
-
-The minimum version of the Keyfactor Universal Orchestrator Framework needed to run this version of the extension is 10.1
-## Platform Specific Notes
-
-The Keyfactor Universal Orchestrator may be installed on either Windows or Linux based platforms. The certificate operations supported by a capability may vary based what platform the capability is installed on. The table below indicates what capabilities are supported based on which platform the encompassing Universal Orchestrator is running.
-| Operation | Win | Linux |
-|-----|-----|------|
-|Supports Management Add|&check; |&check; |
-|Supports Management Remove|&check; |&check; |
-|Supports Create Store|  |  |
-|Supports Discovery|  |  |
-|Supports Reenrollment|  |  |
-|Supports Inventory|&check; |&check; |
-
-
-## PAM Integration
-
-This orchestrator extension has the ability to connect to a variety of supported PAM providers to allow for the retrieval of various client hosted secrets right from the orchestrator server itself.  This eliminates the need to set up the PAM integration on Keyfactor Command which may be in an environment that the client does not want to have access to their PAM provider.
-
-The secrets that this orchestrator extension supports for use with a PAM Provider are:
-
-|Name|Description|
-|----|-----------|
-|ServerUsername|The user id that will be used to authenticate into the server hosting the store|
-|ServerPassword|The password that will be used to authenticate into the server hosting the store|
-|StorePassword|The optional password used to secure the certificate store being managed|
-
-It is not necessary to use a PAM Provider for all of the secrets available above. If a PAM Provider should not be used, simply enter in the actual value to be used, as normal.
-
-If a PAM Provider will be used for one of the fields above, start by referencing the [Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam). The GitHub repo for the PAM Provider to be used contains important information such as the format of the `json` needed. What follows is an example but does not reflect the `json` values for all PAM Providers as they have different "instance" and "initialization" parameter names and values.
-
-<details><summary>General PAM Provider Configuration</summary>
-<p>
-
-
-
-### Example PAM Provider Setup
-
-To use a PAM Provider to resolve a field, in this example the __Server Password__ will be resolved by the `Hashicorp-Vault` provider, first install the PAM Provider extension from the [Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam) on the Universal Orchestrator.
-
-Next, complete configuration of the PAM Provider on the UO by editing the `manifest.json` of the __PAM Provider__ (e.g. located at extensions/Hashicorp-Vault/manifest.json). The "initialization" parameters need to be entered here:
-
-~~~ json
-  "Keyfactor:PAMProviders:Hashicorp-Vault:InitializationInfo": {
-    "Host": "http://127.0.0.1:8200",
-    "Path": "v1/secret/data",
-    "Token": "xxxxxx"
-  }
-~~~
-
-After these values are entered, the Orchestrator needs to be restarted to pick up the configuration. Now the PAM Provider can be used on other Orchestrator Extensions.
-
-### Use the PAM Provider
-With the PAM Provider configured as an extenion on the UO, a `json` object can be passed instead of an actual value to resolve the field with a PAM Provider. Consult the [Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam) for the specific format of the `json` object.
-
-To have the __Server Password__ field resolved by the `Hashicorp-Vault` provider, the corresponding `json` object from the `Hashicorp-Vault` extension needs to be copied and filed in with the correct information:
-
-~~~ json
-{"Secret":"my-kv-secret","Key":"myServerPassword"}
-~~~
-
-This text would be entered in as the value for the __Server Password__, instead of entering in the actual password. The Orchestrator will attempt to use the PAM Provider to retrieve the __Server Password__. If PAM should not be used, just directly enter in the value for the field.
+<p align="center">
+  <!-- Badges -->
+<img src="https://img.shields.io/badge/integration_status-production-3D1973?style=flat-square" alt="Integration Status: production" />
+<a href="https://github.com/Keyfactor/citrix-adc-orchestrator/releases"><img src="https://img.shields.io/github/v/release/Keyfactor/citrix-adc-orchestrator?style=flat-square" alt="Release" /></a>
+<img src="https://img.shields.io/github/issues/Keyfactor/citrix-adc-orchestrator?style=flat-square" alt="Issues" />
+<img src="https://img.shields.io/github/downloads/Keyfactor/citrix-adc-orchestrator/total?style=flat-square&label=downloads&color=28B905" alt="GitHub Downloads (all assets, all releases)" />
 </p>
-</details> 
 
+<p align="center">
+  <!-- TOC -->
+  <a href="#support">
+    <b>Support</b>
+  </a>
+  ·
+  <a href="#installation">
+    <b>Installation</b>
+  </a>
+  ·
+  <a href="#license">
+    <b>License</b>
+  </a>
+  ·
+  <a href="https://github.com/orgs/Keyfactor/repositories?q=orchestrator">
+    <b>Related Integrations</b>
+  </a>
+</p>
 
-
-
----
-
-
-# Citrix ADC Orchestrator Configuration
 ## Overview
 
-The Citrix ADC Orchestrator remotely manages certificates on the NetScaler device.  Since the ADC supports services including: 
+The Citrix ADC Orchestrator remotely manages certificate objects on a Citrix ADC device.  Since the ADC supports services including: 
 Load Balancing, Authentication/Authorization/Auditing (AAA), and Gateways, this orchestrator can bind to any of these virtual servers when using unique virtual server names for each service.
 
-### Permissions
 
-The NetScaler user needs permission to perform the following API calls:
+
+## Compatibility
+
+This integration is compatible with Keyfactor Universal Orchestrator version 10.4 and later.
+
+## Support
+The Citrix Netscaler Universal Orchestrator extension is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com. 
+ 
+> To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
+
+## Requirements & Prerequisites
+
+Before installing the Citrix Netscaler Universal Orchestrator extension, we recommend that you install [kfutil](https://github.com/Keyfactor/kfutil). Kfutil is a command-line tool that simplifies the process of creating store types, installing extensions, and instantiating certificate stores in Keyfactor Command.
+
+
+The Citrix ADC user needs permission to perform the following API calls:
 
 API Endpoint|Methods
 ---|---
@@ -123,111 +67,209 @@ Allow
 (^stat\s+(cr|cs|lb|system|vpn))|(^(add|rm|show)\s+system\s+file\s+.*)|(^\S+\s+ssl\s+.*)|(^(show|stat|sync)\s+HA\s+.*)|(^save\s+ns\s+config)|(^(switch|show)\s+ns\s+partition.*)
 
 
-### Upgrade Procedures
+## Create the CitrixAdc Certificate Store Type
 
-* Upgrade From v1.0.2 to v2.0.0
-	* In the Keyfactor Command Database, run the following SQL Script to update the store types and store information [Upgrade Script](https://github.com/Keyfactor/citrix-adc-orchestrator/blob/snipamupdates/UpgradeScript.sql)
-
-### Below are specific notes and limitations
-
-* Direct PFX Binding Inventory
-	* In NetScaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in NetScaler is descibed in this [NetScaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
-
-* Specifiy Multiple VServers and Sni Flags
-	* When Binding to Multiple VServers and using Multiple SniFlags, you must use a comma separated list of values as described in Test Case 13 in the Test Cases Section.  This will change in future version, so each binding is a store in Keyfactor.
-
-* Down Time When Replacing Certs
-	* The orchestrator uses [NetScaler recommended methods](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/add-group-certs.html) to replace bound certs which creates a sub second blip of downtime.  There is currently no way around this if you want readable keypair names.
-
-* Removing Certs from Store
-	* As defined in Test Cases 5 and 13 below, certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server and then remove the cert using Command.  This requirement may change in a future version.
-
-* Renewals
-	* The renewal process will find the thumbprint of the cert on all VServers and renew them in all places.  See test cases #6 and #10 in the Test Cases section.
-	
-* AutoSave Config
-	* A new config.json file in the extension folder contains the 'AutoSaveConfig' flag with a default value of 'N'.  When this flag is set to 'Y', successful configuration changes made by a management job will be automatically saved to disk; no interaction with the Citrix ADC UI is necessary.
-	
-	**NOTE:** Any changes in-process through the Citrix ADC UI will also be persisted to disk when a management job is performed and the AutoSaveConfig flag is set to 'Y'.
-
-* Support for Virtual Authentication Servers & Gateways
-	* When performing management operations to either of services, Users may enter the specific VServer name to complete the operation.
-
-	**NOTE:** If multiple VServers share the same Alias, all VServers that share that alias will be updated.
-
-* Supports optional linking of added certificates to issuing CA certificate if issuing CA is already installed in the managed Netscaler instance.
-
-<details>
-  <summary>Cert Store Type Settings</summary>
-<br />
-
-![](Images/CertStoreTypeSettings.gif)
-
-**Basic Settings**
-
-CONFIG ELEMENT	| VALUE | DESCRIPTION
-------------------|------------------|----------------
-Name  |Citrix ADC	|A descriptive name for the extension.  Example:  CitrixAdc
-Short Name|CitrixADC|The short name that identifies the registered functionality of the orchestrator. Must be CitrixAdc.
-Custom Capability|Unchecked|Store type name orchestrator will register with.
-Supported Job Types|Inventory, Add, Remove	|Job types this extension supports
-Needs Server | Checked | Determines if a target server name is required when creating store
-Blueprint Allowed | Unchecked | Determines if store type may be included in an Orchestrator blueprint
-Uses PowerShell | Unchecked | Determines if underlying implementation is PowerShell
-Requires Store Password|Unchecked |Determines if a store password is required when configuring an individual store.
-Supports Entry Password|Unchecked |Determined if an individual entry within a store can have a password.
-
-**Advanced Settings**
-
-CONFIG ELEMENT	| VALUE | DESCRIPTION
-------------------|------------------|----------------
-Store Path Type	|Freeform	|Determines what restrictions are applied to the store path field when configuring a new store.
-Supports Custom	Alias		|Required	|Determines if an individual entry within a store can have a custom Alias.
-Private Keys	|Required	|This determines if Keyfactor can send the private key associated with a certificate to the store.  This is required since Citrix ADC will need the private key material to establish TLS connections.
-PFX Password Style			|Default or Custom	|This determines how the platform generate passwords to protect a PFX enrollment job that is delivered to the store.
-
-**Custom Fields**
-
-Name|Display Name|Type|Default Value|Required|Description
----|---|---|---|---|---
-ServerUsername|Server Username|Secret||No|The username to log into the Server
-ServerPassword|Server Password|Secret||No|The password that matches the username to log into the Server
-ServerUseSsl|Use SSL|Bool|True|Yes|Determine whether the server uses SSL or not
-linkToIssuer|Link To Issuer|Bool|False|False|Determines whether attempt will be made to link certificate added via a Management-Add job to its issuing CA certificate
-
-**Entry Parameters**
-
-Name|Display Name|Type|Default Value|Required|Description
----|---|---|---|---|---
-virtualServerName|Virtual Server Name|String| |Leave All Unchecked|When Enrolling, this can be a single or comma separated list of VServers in NetScaler to replace. <br/>**NOTE:** When adding multiple VServers, each certificate will contain the same alias name.
-sniCert|SNI Cert|String|false
-
-
-</details>
-
-<details>
-  <summary>Cert Store Setup</summary>
-<br />
-
-![](Images/CertStore.gif)
-
-#### STORE CONFIG
-CONFIG ELEMENT	| DESCRIPTION
-------------------|------------------
-Client Machine	| This is the IP Address of the NetScaler Appliance.
-Store Path| This is the path of the NetScaler Appliance.  /nsconfig/ssl/.
-User| This is the user that will be authenticated against the NetScaler Appliance
-Password| This is the password that will be authenticated against the NetScaler Appliance
-Use SSL| This should be set to True in Production when there is a valid certificate.
-Inventory Schedule| Set this for the appropriate inventory interval needed.
-
-</details>
+To use the Citrix Netscaler Universal Orchestrator extension, you **must** create the CitrixAdc Certificate Store Type. This only needs to happen _once_ per Keyfactor Command instance.
 
 
 
-<details>
-  <summary>Test Cases</summary>
-<br />
+* **Create CitrixAdc using kfutil**:
+
+    ```shell
+    # CitrixAdc
+    kfutil store-types create CitrixAdc
+    ```
+
+* **Create CitrixAdc manually in the Command UI**:
+    <details><summary>Create CitrixAdc manually in the Command UI</summary>
+
+    Create a store type called `CitrixAdc` with the attributes in the tables below:
+
+    #### Basic Tab
+    | Attribute | Value | Description |
+    | --------- | ----- | ----- |
+    | Name | CitrixAdc | Display name for the store type (may be customized) |
+    | Short Name | CitrixAdc | Short display name for the store type |
+    | Capability | CitrixAdc | Store type name orchestrator will register with. Check the box to allow entry of value |
+    | Supports Add | ✅ Checked | Check the box. Indicates that the Store Type supports Management Add |
+    | Supports Remove | ✅ Checked | Check the box. Indicates that the Store Type supports Management Remove |
+    | Supports Discovery | 🔲 Unchecked |  Indicates that the Store Type supports Discovery |
+    | Supports Reenrollment | 🔲 Unchecked |  Indicates that the Store Type supports Reenrollment |
+    | Supports Create | 🔲 Unchecked |  Indicates that the Store Type supports store creation |
+    | Needs Server | ✅ Checked | Determines if a target server name is required when creating store |
+    | Blueprint Allowed | 🔲 Unchecked | Determines if store type may be included in an Orchestrator blueprint |
+    | Uses PowerShell | 🔲 Unchecked | Determines if underlying implementation is PowerShell |
+    | Requires Store Password | 🔲 Unchecked | Enables users to optionally specify a store password when defining a Certificate Store. |
+    | Supports Entry Password | 🔲 Unchecked | Determines if an individual entry within a store can have a password. |
+
+    The Basic tab should look like this:
+
+    ![CitrixAdc Basic Tab](docsource/images/CitrixAdc-basic-store-type-dialog.png)
+
+    #### Advanced Tab
+    | Attribute | Value | Description |
+    | --------- | ----- | ----- |
+    | Supports Custom Alias | Required | Determines if an individual entry within a store can have a custom Alias. |
+    | Private Key Handling | Required | This determines if Keyfactor can send the private key associated with a certificate to the store. Required because IIS certificates without private keys would be invalid. |
+    | PFX Password Style | Default | 'Default' - PFX password is randomly generated, 'Custom' - PFX password may be specified when the enrollment job is created (Requires the Allow Custom Password application setting to be enabled.) |
+
+    The Advanced tab should look like this:
+
+    ![CitrixAdc Advanced Tab](docsource/images/CitrixAdc-advanced-store-type-dialog.png)
+
+    #### Custom Fields Tab
+    Custom fields operate at the certificate store level and are used to control how the orchestrator connects to the remote target server containing the certificate store to be managed. The following custom fields should be added to the store type:
+
+    | Name | Display Name | Description | Type | Default Value/Options | Required |
+    | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
+    | linkToIssuer | Link To Issuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. | Bool | false | 🔲 Unchecked |
+    | ServerUsername | Server Username | The username credential for authenticating against the Citrix ADC (NetScaler) appliance. Example: admin. | Secret |  | 🔲 Unchecked |
+    | ServerPassword | Server Password | The password credential associated with the username for authenticating against the Citrix ADC (NetScaler) appliance. Example: Pa$$w0rd. | Secret |  | 🔲 Unchecked |
+
+    The Custom Fields tab should look like this:
+
+    ![CitrixAdc Custom Fields Tab](docsource/images/CitrixAdc-custom-fields-store-type-dialog.png)
+
+
+
+    #### Entry Parameters Tab
+
+    | Name | Display Name | Description | Type | Default Value | Entry has a private key | Adding an entry | Removing an entry | Reenrolling an entry |
+    | ---- | ------------ | ---- | ------------- | ----------------------- | ---------------- | ----------------- | ------------------- | ----------- |
+    | virtualServerName | Virtual Server Name | When adding a certificate, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
+    | sniCert | SNI Cert | When adding a certificate, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
+
+    The Entry Parameters tab should look like this:
+
+    ![CitrixAdc Entry Parameters Tab](docsource/images/CitrixAdc-entry-parameters-store-type-dialog.png)
+
+
+
+    </details>
+
+## Installation
+
+1. **Download the latest Citrix Netscaler Universal Orchestrator extension from GitHub.** 
+
+    Navigate to the [Citrix Netscaler Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/citrix-adc-orchestrator/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
+    | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `citrix-adc-orchestrator` .NET version to download |
+    | --------- | ----------- | ----------- | ----------- |
+    | Older than `11.0.0` | | | `net6.0` |
+    | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | | `net6.0` | 
+    | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `Never` | `net6.0` | 
+    | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `LatestMajor` | `net8.0` | 
+    | `11.6` _and_ newer | `net8.0` | | `net8.0` |
+
+    Unzip the archive containing extension assemblies to a known location.
+
+    > **Note** If you don't see an asset with a corresponding .NET version, you should always assume that it was compiled for `net6.0`.
+
+2. **Locate the Universal Orchestrator extensions directory.**
+
+    * **Default on Windows** - `C:\Program Files\Keyfactor\Keyfactor Orchestrator\extensions`
+    * **Default on Linux** - `/opt/keyfactor/orchestrator/extensions`
+    
+3. **Create a new directory for the Citrix Netscaler Universal Orchestrator extension inside the extensions directory.**
+        
+    Create a new directory called `citrix-adc-orchestrator`.
+    > The directory name does not need to match any names used elsewhere; it just has to be unique within the extensions directory.
+
+4. **Copy the contents of the downloaded and unzipped assemblies from __step 2__ to the `citrix-adc-orchestrator` directory.**
+
+5. **Restart the Universal Orchestrator service.**
+
+    Refer to [Starting/Restarting the Universal Orchestrator service](https://software.keyfactor.com/Core-OnPrem/Current/Content/InstallingAgents/NetCoreOrchestrator/StarttheService.htm).
+
+
+
+> The above installation steps can be supplimented by the [official Command documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/InstallingAgents/NetCoreOrchestrator/CustomExtensions.htm?Highlight=extensions).
+
+
+## Post Installation
+
+An optional config.json configuration file has been provided in the extensions folder with a single setting - AutoSaveConfig.  Setting this value to "Y" means successful changes made by a management job will automatically be saved to disk; no interaction with the Citrix ADC UI is necessary.  Setting this value to "N" (or if the config entry or config file is missing) will keep these changes in memory only.
+
+**NOTE:** Any changes in-process through the Citrix ADC UI will also be persisted to disk when a management job is performed and the AutoSaveConfig flag is set to 'Y'.
+
+
+## Defining Certificate Stores
+
+
+
+* **Manually with the Command UI**
+
+    <details><summary>Create Certificate Stores manually in the UI</summary>
+
+    1. **Navigate to the _Certificate Stores_ page in Keyfactor Command.**
+
+        Log into Keyfactor Command, toggle the _Locations_ dropdown, and click _Certificate Stores_.
+
+    2. **Add a Certificate Store.**
+
+        Click the Add button to add a new Certificate Store. Use the table below to populate the **Attributes** in the **Add** form.
+        | Attribute | Description |
+        | --------- | ----------- |
+        | Category | Select "CitrixAdc" or the customized certificate store name from the previous step. |
+        | Container | Optional container to associate certificate store with. |
+        | Client Machine | The DNS or IP Address of the Citrix ADC Appliance. |
+        | Store Path | The path where certificate files are located on the Citrix ADC appliance.  This value will likely be /nsconfig/ssl/ |
+        | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
+        | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+        | ServerUsername | The username credential for authenticating against the Citrix ADC (NetScaler) appliance. Example: admin. |
+        | ServerPassword | The password credential associated with the username for authenticating against the Citrix ADC (NetScaler) appliance. Example: Pa$$w0rd. |
+
+
+        
+
+    </details>
+
+* **Using kfutil**
+    
+    <details><summary>Create Certificate Stores with kfutil</summary>
+    
+    1. **Generate a CSV template for the CitrixAdc certificate store**
+
+        ```shell
+        kfutil stores import generate-template --store-type-name CitrixAdc --outpath CitrixAdc.csv
+        ```
+    2. **Populate the generated CSV file**
+
+        Open the CSV file, and reference the table below to populate parameters for each **Attribute**.
+        | Attribute | Description |
+        | --------- | ----------- |
+        | Category | Select "CitrixAdc" or the customized certificate store name from the previous step. |
+        | Container | Optional container to associate certificate store with. |
+        | Client Machine | The DNS or IP Address of the Citrix ADC Appliance. |
+        | Store Path | The path where certificate files are located on the Citrix ADC appliance.  This value will likely be /nsconfig/ssl/ |
+        | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
+        | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+        | ServerUsername | The username credential for authenticating against the Citrix ADC (NetScaler) appliance. Example: admin. |
+        | ServerPassword | The password credential associated with the username for authenticating against the Citrix ADC (NetScaler) appliance. Example: Pa$$w0rd. |
+
+
+        
+
+    3. **Import the CSV file to create the certificate stores** 
+
+        ```shell
+        kfutil stores import csv --store-type-name CitrixAdc --file CitrixAdc.csv
+        ```
+    </details>
+
+> The content in this section can be supplimented by the [official Command documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/ReferenceGuide/Certificate%20Stores.htm?Highlight=certificate%20store).
+
+
+
+
+## Notes and Limitations
+
+* As of release 2.2.0, ONLY certificate objects (installed certificates) will be managed by the Citrix ADC Orchestrator Extension.  Prior versions also managed certificate/key file combinations uploaded to the Citrix ADC device but not yet installed.  This functionality has been removed due to issues attempting to match certificate and key files due to inconsistent file naming.
+
+* Direct PFX Binding Inventory: In NetScaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in NetScaler is descibed in this [NetScaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
+
+* Removing Certs from Store: As defined in Test Cases 5 and 13 below, certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server first and then remove via the Command and this orchestrator extension.
+
+## Test Cases
 
 Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
 ----|------------------------|------------------------------------|--------------|----------------|-------------------------
@@ -246,8 +288,11 @@ Case Number|Case Name|Enrollment Params|Expected Results|Passed|Screenshot
 13	|Add Sni Cert To Multiple VServers and bind|**Alias:** TC13.boingy.com<br/>**Virtual Server Name:** TestVServer,TestVServer2<br/>**Sni Cert:** false,true|Adds and binds Cert to TestVServer and adds and binds Sni Cert to TestVServer2|True|![](Images/TC13.gif)
 14	|Inventory |No Params|Will Perform Inventory and pull down all Certs Tied to VServers|True|![](Images/TC14.gif)
 
-</details>
 
-When creating cert store type manually, that store property names and entry parameter names are case sensitive
+## License
 
+Apache License 2.0, see [LICENSE](LICENSE).
 
+## Related Integrations
+
+See all [Keyfactor Universal Orchestrator extensions](https://github.com/orgs/Keyfactor/repositories?q=orchestrator).
