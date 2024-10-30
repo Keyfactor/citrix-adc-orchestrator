@@ -8,10 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="config.tt" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Keyfactor.Common" Version="2.3.6" />
     <PackageReference Include="Keyfactor.Logging" Version="1.1.1" />
     <PackageReference Include="Keyfactor.Orchestrators.IOrchestratorJobExtensions" Version="0.7.0" />
@@ -19,6 +15,9 @@
     <PackageReference Include="System.Text.Encodings.Web" Version="6.0.0" />
   
     <None Update="manifest.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="config.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
