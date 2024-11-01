@@ -45,24 +45,6 @@
                             "DefaultValue": "false",
                             "Required": false,
                             "Description": "Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate."
-                        },
-                        {
-                            "Name": "ServerUsername",
-                            "DisplayName": "Server Username",
-                            "Type": "Secret",
-                            "DependsOn": "",
-                            "DefaultValue": "",
-                            "Required": false,
-                            "Description": "The username credential for authenticating against the Citrix ADC (NetScaler) appliance. Example: admin."
-                        },
-                        {
-                            "Name": "ServerPassword",
-                            "DisplayName": "Server Password",
-                            "Type": "Secret",
-                            "DependsOn": "",
-                            "DefaultValue": "",
-                            "Required": false,
-                            "Description": "The password credential associated with the username for authenticating against the Citrix ADC (NetScaler) appliance. Example: Pa$$w0rd."
                         }
                     ],
                     "EntryParameters": [
