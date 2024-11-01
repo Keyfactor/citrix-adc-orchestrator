@@ -7,6 +7,7 @@
     "update_catalog": true,
     "support_level": "kf-supported",
     "release_dir": "CitrixAdcOrchestratorJobExtension/bin/Release",
+    "release_project": "CitrixAdcOrchestratorJobExtension/Keyfactor.Extensions.Orchestrator.CitricAdc.csproj",
     "description": "Orchestrator to manage certificates and keys on one to many VServers in Netscaler.  The integration supports Enrollment, Renewal, Inventory and Remove from Store.",
     "about": {
         "orchestrator": {
