@@ -1,6 +1,6 @@
 ## Overview
 
-The Citrixx ADC Orchestrator remotely manages certificate objects on a Citrix ADC device.  Since the ADC supports services including: 
+The Citrix ADC Orchestrator remotely manages certificate objects on a Citrix ADC device.  Since the ADC supports services including: 
 Load Balancing, Authentication/Authorization/Auditing (AAA), and Gateways, this orchestrator can bind to any of these virtual servers when using unique virtual server names for each service.
 
 ## Requirements
