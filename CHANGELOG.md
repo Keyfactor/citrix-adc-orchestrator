@@ -1,3 +1,6 @@
+2.2.1
+* Add ServerUsername and ServerPassword to the integration-manifest.json to add both fields to the README documentation.
+
 2.2.0
 * Removed the ability to manage certificate/key file combinations uploaded but not yet installed on the Citrix ADC device.  This was done due to issues centered around inconsistent naming of uploaded certificate and key files.  From this release forward only installed certificate objects will be managed by this orchestrator extension.
 * Modify process for renewing certificates to create new certificate/key files instead of deleting/re-adding existing so that no sub second outage occurs
