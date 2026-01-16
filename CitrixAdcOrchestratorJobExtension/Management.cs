@@ -126,7 +126,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             }
                         }
 
-                        PerformAdd(store, jobConfiguration.JobCertificate, virtualServerNames,
+                        PerformAdd(store, jobConfiguration.JobCertificate, jobConfiguration.CertificateStoreDetails.StorePassword, virtualServerNames,
                             aliasExists, jobConfiguration.Overwrite, sniCerts, linkToIssuer);
 
                         if (ApplicationSettings.AutoSaveConfig)
@@ -162,7 +162,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     Result = OrchestratorJobStatusJobResult.Warning,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = ex.Message
+                    FailureMessage = LogHandler.FlattenException(ex, true)
                 };
             }
             catch (Exception ex)
@@ -172,14 +172,15 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     Result = OrchestratorJobStatusJobResult.Failure,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = ex.Message
+                    FailureMessage = LogHandler.FlattenException(ex, true)
                 };
             }
 
             JobResult result = new JobResult
             {
                 Result = OrchestratorJobStatusJobResult.Success,
-                JobHistoryId = jobConfiguration.JobHistoryId
+                JobHistoryId = jobConfiguration.JobHistoryId,
+                FailureMessage = "testing 1-2-3, testing"
             };
 
             _logger.LogDebug("Logging out of Citrix...");
@@ -191,14 +192,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return result;
         }
 
-        private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert,
+        private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string storePassword,
             List<string> virtualServerNames, bool aliasExists, bool overwrite, List<bool> sniCerts, bool linkToIssuer)
         {
             _logger.MethodEntry(LogLevel.Debug);
 
             _logger.LogDebug("Updating keyPair");
 
-            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, cert.Alias, overwrite); 
+            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, storePassword, cert.Alias, overwrite); 
             store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename);
 
             _logger.LogDebug("Updating cert bindings");
