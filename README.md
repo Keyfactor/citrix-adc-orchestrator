@@ -161,6 +161,7 @@ the Keyfactor Command Portal
    | ServerUsername | Server Username | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. | Secret |  | 🔲 Unchecked |
    | ServerPassword | Server Password | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. | Secret |  | 🔲 Unchecked |
    | linkToIssuer | Link To Issuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. | Bool | false | 🔲 Unchecked |
+   | timeout | API Timeout in seconds | Determines timeout in seconds for all Citrix ADC API calls. | String | 3600 | 🔲 Unchecked |
 
    The Custom Fields tab should look like this:
 
@@ -191,6 +192,13 @@ the Keyfactor Command Portal
    Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate.
 
    ![CitrixAdc Custom Field - linkToIssuer](docsource/images/CitrixAdc-custom-field-linkToIssuer-dialog.png)
+
+
+
+   ###### API Timeout in seconds
+   Determines timeout in seconds for all Citrix ADC API calls.
+
+   ![CitrixAdc Custom Field - timeout](docsource/images/CitrixAdc-custom-field-timeout-dialog.png)
 
 
 
@@ -300,6 +308,7 @@ An optional config.json configuration file has been provided in the extensions f
    | ServerUsername | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+   | timeout | Determines timeout in seconds for all Citrix ADC API calls. |
 
 </details>
 
@@ -328,6 +337,7 @@ An optional config.json configuration file has been provided in the extensions f
    | Properties.ServerUsername | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | Properties.ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | Properties.linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+   | Properties.timeout | Determines timeout in seconds for all Citrix ADC API calls. |
 
 3. **Import the CSV file to create the certificate stores**
 
