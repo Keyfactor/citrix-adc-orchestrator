@@ -23,6 +23,7 @@ using Keyfactor.Orchestrators.Extensions.Interfaces;
 
 using com.citrix.netscaler.nitro.resource.config.ssl;
 using Newtonsoft.Json;
+using Keyfactor.Orchestrators.Common.Enums;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -55,7 +56,19 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
 
             dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
-            var timeout = properties.timeout == null || string.IsNullOrEmpty(properties.timeout.Value) ? null : Convert.ToInt32(properties.timeout.Value);
+            UInt32 timeout = 0;
+            if (!UInt32.TryParse((properties.timeout == null || string.IsNullOrEmpty(properties.timeout.Value) ? "0" : properties.timeout.Value), out timeout))
+            {
+                string err = $"Invalid Custom Field 'timeout' value {properties.timeout.Value}.  Value must be numeric";
+                _logger.LogError(err);
+                return new JobResult
+                {
+                    Result = OrchestratorJobStatusJobResult.Failure,
+                    JobHistoryId = jobConfiguration.JobHistoryId,
+                    FailureMessage =
+                        $"Site {jobConfiguration.CertificateStoreDetails.StorePath} on server {jobConfiguration.CertificateStoreDetails.ClientMachine}: {err}."
+                };
+            }
 
             _logger.LogDebug("Entering ProcessJob");
             CitrixAdcStore store = new CitrixAdcStore(jobConfiguration, ServerUserName, ServerPassword);

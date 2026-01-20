@@ -64,7 +64,20 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
             var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
-            var timeout = properties.timeout == null || string.IsNullOrEmpty(properties.timeout.Value) ? null : Convert.ToInt32(properties.timeout.Value);
+
+            UInt32 timeout = 0;
+            if (!UInt32.TryParse((properties.timeout == null || string.IsNullOrEmpty(properties.timeout.Value) ? "0" : properties.timeout.Value), out timeout))
+            {
+                string err = $"Invalid Custom Field 'timeout' value {properties.timeout.Value}.  Value must be numeric";
+                _logger.LogError(err);
+                return new JobResult
+                {
+                    Result = OrchestratorJobStatusJobResult.Failure,
+                    JobHistoryId = jobConfiguration.JobHistoryId,
+                    FailureMessage =
+                        $"Site {jobConfiguration.CertificateStoreDetails.StorePath} on server {jobConfiguration.CertificateStoreDetails.ClientMachine}: {err}."
+                };
+            }
 
             ApplicationSettings.Initialize(this.GetType().Assembly.Location);
 

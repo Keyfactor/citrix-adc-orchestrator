@@ -123,14 +123,16 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         // ReSharper disable once UnusedAutoPropertyAccessor.Local
         private ILogger Logger { get; }
 
-        public void Login()
+        public void Login(uint? timeout)
         {
             Logger.MethodEntry(LogLevel.Debug);
             _nss ??= new nitro_service(_clientMachine, _useSsl ? "https" : "http");
+            _nss.set_timeout(timeout == 0 ? Timeout : timeout);
+
             base_response response = null;
             try
             {
-                response = _nss.login(_username, _password, Timeout);
+                response = _nss.login(_username, _password);
                 Logger.LogDebug($"Login Response: {JsonConvert.SerializeObject(response)}");
             }
             catch (Exception ex)
