@@ -62,12 +62,16 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
             ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
 
+            dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
+            var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
+            var timeout = properties.timeout == null || string.IsNullOrEmpty(properties.timeout.Value) ? null : Convert.ToInt32(properties.timeout.Value);
+
             ApplicationSettings.Initialize(this.GetType().Assembly.Location);
 
             var store = new CitrixAdcStore(jobConfiguration, ServerUserName, ServerPassword);
 
             _logger.LogDebug("Logging into Citrix...");
-            store.Login();
+            store.Login(timeout);
 
             try
             {
@@ -88,9 +92,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         _logger.LogDebug("Begin Add...");
                         var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
                         var sniCert = (string)jobConfiguration.JobProperties["sniCert"];
-
-                        dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
-                        var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
 
                         _logger.LogTrace($"alias: {jobConfiguration.JobCertificate.Alias} virtualServerName {virtualServerName}");
 
