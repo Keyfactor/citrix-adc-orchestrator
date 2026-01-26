@@ -22,6 +22,7 @@ using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Extensions.Interfaces;
 
 using com.citrix.netscaler.nitro.resource.config.ssl;
+using Newtonsoft.Json;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -49,15 +50,18 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             _logger.LogDebug($"Client Machine: {jobConfiguration.CertificateStoreDetails.ClientMachine}");
             _logger.LogDebug($"UseSSL: {jobConfiguration.UseSSL}");
             _logger.LogDebug($"StorePath: {jobConfiguration.CertificateStoreDetails.StorePath}");
+
             ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
             ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
 
+            dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
+            var timeout = properties.timeout == null || string.IsNullOrEmpty(properties.timeout.Value) ? null : Convert.ToInt32(properties.timeout.Value);
 
             _logger.LogDebug("Entering ProcessJob");
             CitrixAdcStore store = new CitrixAdcStore(jobConfiguration, ServerUserName, ServerPassword);
 
             _logger.LogDebug("Logging into Citrix...");
-            store.Login();
+            store.Login(timeout);
 
             JobResult result = ProcessJob(store, jobConfiguration, submitInventoryUpdate);
 

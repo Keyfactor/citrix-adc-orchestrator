@@ -16,10 +16,8 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Xml.Linq;
 using com.citrix.netscaler.nitro.exception;
 using com.citrix.netscaler.nitro.resource.Base;
 using com.citrix.netscaler.nitro.resource.config.ssl;
@@ -28,6 +26,9 @@ using com.citrix.netscaler.nitro.service;
 using com.citrix.netscaler.nitro.util;
 using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Extensions;
+using Keyfactor.PKI.CryptographicObjects.Formatters;
+using Keyfactor.PKI.PEM;
+using Keyfactor.PKI.PrivateKeys;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
@@ -328,8 +329,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             catch (nitro_exception ne)
             {
-                Logger.LogError($"Exception occured while trying to add or update {keyPairName}.  {LogHandler.FlattenException(ne)}");
-                throw;
+                string error = $"Exception occured while trying to add or update {keyPairName}.";
+                Logger.LogError(error + LogHandler.FlattenException(ne));
+                throw new Exception(error, ne);
             }
 
             Logger.MethodExit(LogLevel.Debug);
@@ -478,47 +480,33 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             Logger.MethodExit(LogLevel.Debug);
         }
 
-        private (string, string) GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword)
+        private (string, string) GetPemFromPfx(byte[] pfxBytes, char[] pfxPassword, string storePassword)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
             try
             {
-                var p = new Pkcs12Store(new MemoryStream(pfxBytes), pfxPassword);
+                Pkcs12StoreBuilder storeBuilder = new Pkcs12StoreBuilder();
+                Pkcs12Store store = storeBuilder.Build();
+                store.Load(new MemoryStream(pfxBytes), pfxPassword);
 
-                // Extract private key
-                var memoryStream = new MemoryStream();
-                TextWriter streamWriter = new StreamWriter(memoryStream);
-                var pemWriter = new PemWriter(streamWriter);
+                var alias = store.Aliases.Cast<string>().SingleOrDefault(p => store.IsKeyEntry(p));
 
-                var alias = p.Aliases.Cast<string>().SingleOrDefault(a => p.IsKeyEntry(a));
-                Logger.LogTrace($"alias: {alias}");
+                X509CertificateEntry[] chainEntries = store.GetCertificateChain(alias);
+                Org.BouncyCastle.X509.X509Certificate endCertificate = chainEntries[0].Certificate;
 
-                var publicKey = p.GetCertificate(alias).Certificate.GetPublicKey();
-                if (p.GetKey(alias) == null) throw new Exception($"Unable to get the key for alias: {alias}");
-                var privateKey = p.GetKey(alias).Key;
-                var keyPair = new AsymmetricCipherKeyPair(publicKey, privateKey);
+                AsymmetricKeyParameter privateKey = store.GetKey(alias).Key;
+                PrivateKeyConverter keyConverter = PrivateKeyConverterFactory.FromBCPrivateKeyAndCert(privateKey, endCertificate);
 
-                pemWriter.WriteObject(keyPair.Private);
-                streamWriter.Flush();
-                var privateKeyString = Encoding.ASCII.GetString(memoryStream.GetBuffer()).Trim().Replace("\r", "")
-                    .Replace("\0", "");
-                memoryStream.Close();
-                streamWriter.Close();
+                string pemString = CryptographicObjectFormatter.PEM.Format(endCertificate, false);
+                string keyString = string.Empty;
 
-                // Extract server certificate
-                var certStart = "-----BEGIN CERTIFICATE-----\n";
-                var certEnd = "\n-----END CERTIFICATE-----";
+                if (string.IsNullOrEmpty(storePassword))
+                    keyString = PemUtilities.DERToPEM(keyConverter.ToPkcs8BlobUnencrypted(), Keyfactor.PKI.PEM.PemUtilities.PemObjectType.PrivateKey);
+                else
+                    keyString = CryptographicObjectFormatter.PEM.Format(keyConverter, storePassword);
 
-                string Pemify(string ss)
-                {
-                    return ss.Length <= 64 ? ss : ss.Substring(0, 64) + "\n" + Pemify(ss.Substring(64));
-                }
-
-                var certPem =
-                    certStart + Pemify(Convert.ToBase64String(p.GetCertificate(alias).Certificate.GetEncoded())) +
-                    certEnd;
-                return (certPem, privateKeyString);
+                return (pemString, keyString);
             }
             catch (Exception e)
             {
@@ -611,14 +599,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string pwd,
+        public (systemfile pemFile, systemfile privateKeyFile) UploadCertificate(string contents, string certTempPassword, string storePassword,
             string alias, bool overwrite)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
             try
             {
-                var (certificate, privateKey) = GetPemFromPfx(Convert.FromBase64String(contents), pwd.ToCharArray());
+                var (certificate, privateKey) = GetPemFromPfx(Convert.FromBase64String(contents), certTempPassword.ToCharArray(), storePassword);
 
                 //upload certificate and key
                 systemfile certificateFile = UploadFile(alias, certificate, true, 0);
