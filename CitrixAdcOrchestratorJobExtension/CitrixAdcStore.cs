@@ -290,7 +290,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public void UpdateKeyPair(string keyPairName, string certFileName, string keyFileName)
+        public void UpdateKeyPair(string keyPairName, string certFileName, string keyFileName, string keyPassword)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
@@ -305,8 +305,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     key = keyFileName,
                     inform = "PEM",
                     nodomaincheck = true,
-                    passplain = "0",
-                    password = false
+                    passplain = keyPassword
                 };
                 
                 var filters = new filtervalue[1];

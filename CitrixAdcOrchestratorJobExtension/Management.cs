@@ -214,7 +214,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             _logger.LogDebug("Updating keyPair");
 
             var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, storePassword, cert.Alias, overwrite); 
-            store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename);
+            store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename, storePassword);
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
