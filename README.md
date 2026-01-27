@@ -192,6 +192,7 @@ the Keyfactor Command Portal
    Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate.
 
    ![CitrixAdc Custom Field - linkToIssuer](docsource/images/CitrixAdc-custom-field-linkToIssuer-dialog.png)
+   ![CitrixAdc Custom Field - linkToIssuer](docsource/images/CitrixAdc-custom-field-linkToIssuer-validation-options-dialog.png)
 
 
 
@@ -199,6 +200,7 @@ the Keyfactor Command Portal
    Determines timeout in seconds for all Citrix ADC API calls.
 
    ![CitrixAdc Custom Field - timeout](docsource/images/CitrixAdc-custom-field-timeout-dialog.png)
+   ![CitrixAdc Custom Field - timeout](docsource/images/CitrixAdc-custom-field-timeout-validation-options-dialog.png)
 
 
 
@@ -220,12 +222,14 @@ the Keyfactor Command Portal
    When adding a certificate, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values.
 
    ![CitrixAdc Entry Parameter - virtualServerName](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-virtualServerName.png)
+   ![CitrixAdc Entry Parameter - virtualServerName](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-virtualServerName-validation-options.png)
 
 
    ##### SNI Cert
    When adding a certificate, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values.
 
    ![CitrixAdc Entry Parameter - sniCert](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-sniCert.png)
+   ![CitrixAdc Entry Parameter - sniCert](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-sniCert-validation-options.png)
 
 
 
