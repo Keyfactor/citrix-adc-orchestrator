@@ -65,6 +65,15 @@
                       "DefaultValue": "false",
                       "Required": false,
                       "Description": "Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate."
+                    },
+                    {
+                      "Name": "timeout",
+                      "DisplayName": "API Timeout in seconds",
+                      "Type": "String",
+                      "DependsOn": "",
+                      "DefaultValue": "3600",
+                      "Required": false,
+                      "Description": "Determines timeout in seconds for all Citrix ADC API calls."
                     }
                   ],
                     "EntryParameters": [
