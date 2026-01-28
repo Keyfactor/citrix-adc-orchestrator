@@ -305,7 +305,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     key = keyFileName,
                     inform = "PEM",
                     nodomaincheck = true,
-                    passplain = keyPassword
+                    passplain = keyPassword,
+                    password = keyPassword == null ? null : false
                 };
                 
                 var filters = new filtervalue[1];

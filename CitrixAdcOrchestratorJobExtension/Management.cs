@@ -193,8 +193,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             JobResult result = new JobResult
             {
                 Result = OrchestratorJobStatusJobResult.Success,
-                JobHistoryId = jobConfiguration.JobHistoryId,
-                FailureMessage = "testing 1-2-3, testing"
+                JobHistoryId = jobConfiguration.JobHistoryId
             };
 
             _logger.LogDebug("Logging out of Citrix...");
