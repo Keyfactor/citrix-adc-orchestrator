@@ -41,7 +41,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
     // ReSharper disable once InconsistentNaming
     internal class CitrixAdcStore
     {
-        private const uint DefaultTimeout = 3600;
+        private const string DefaultTimeout = "3600";
         public static readonly string StoreType = "CitrixAdc";
 
         private readonly string _clientMachine;
@@ -66,7 +66,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 dynamic properties = JsonConvert.DeserializeObject(config.CertificateStoreDetails.Properties.ToString());
                 if (!UInt32.TryParse((properties.timeout == null || string.IsNullOrEmpty(properties.timeout.Value) ? DefaultTimeout : properties.timeout.Value), out _timeout))
                 {
-                    Logger.LogWarning($"Missing or invalid Custom Field 'timeout' value {properties.timeout.Value}.  Value must be an integer.  Will use default value of {DefaultTimeout.ToString()}");
+                    Logger.LogWarning($"Invalid Custom Field 'timeout' value {properties.timeout.Value}.  Value must be an integer.  Will use default value of {DefaultTimeout.ToString()}");
+                    _timeout = Convert.ToUInt32(DefaultTimeout);
                 }
 
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
