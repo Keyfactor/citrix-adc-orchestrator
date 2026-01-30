@@ -40,6 +40,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private string ServerPassword { get; set; }
 
+        private string StorePassword { get; set; }
+
         public Management(IPAMSecretResolver resolver)
         {
             this.resolver = resolver;
@@ -61,6 +63,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
             ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
+            StorePassword = ResolvePamField("StorePassword", jobConfiguration.CertificateStoreDetails.StorePassword);
 
             dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
             var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
@@ -126,7 +129,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             }
                         }
 
-                        PerformAdd(store, jobConfiguration.JobCertificate, jobConfiguration.CertificateStoreDetails.StorePassword, virtualServerNames,
+                        PerformAdd(store, jobConfiguration.JobCertificate, StorePassword, virtualServerNames,
                             aliasExists, jobConfiguration.Overwrite, sniCerts, linkToIssuer);
 
                         if (ApplicationSettings.AutoSaveConfig)

@@ -31,11 +31,15 @@
                         "Enrollment": false,
                         "Remove": true
                     },
-                    "PasswordOptions": {
-                        "EntrySupported": false,
-                        "StoreRequired": false,
-                        "Style": "Default"
-                    },
+                  "PasswordOptions": {
+                    "Style": "Default",
+                    "EntrySupported": false,
+                    "StoreRequired": true,
+                    "StorePassword": {
+                      "Description": "Enter a password that matches your Citrix validation rules to encrypt private keys when adding/replacing certificates.  Select 'No Value' if you desire an unencrypted private key to be uploaded.",
+                      "IsPAMEligible": true
+                    }
+                  },
                   "Properties": [
                     {
                       "Name": "ServerUsername",
@@ -68,7 +72,7 @@
                     },
                     {
                       "Name": "timeout",
-                      "DisplayName": "API Timeout in seconds",
+                      "DisplayName": "Login Timeout in seconds",
                       "Type": "String",
                       "DependsOn": "",
                       "DefaultValue": "3600",
