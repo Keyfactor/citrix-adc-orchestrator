@@ -133,7 +133,7 @@ the Keyfactor Command Portal
    | Needs Server | ✅ Checked | Determines if a target server name is required when creating store |
    | Blueprint Allowed | 🔲 Unchecked | Determines if store type may be included in an Orchestrator blueprint |
    | Uses PowerShell | 🔲 Unchecked | Determines if underlying implementation is PowerShell |
-   | Requires Store Password | 🔲 Unchecked | Enables users to optionally specify a store password when defining a Certificate Store. |
+   | Requires Store Password | ✅ Checked | Enables users to optionally specify a store password when defining a Certificate Store. |
    | Supports Entry Password | 🔲 Unchecked | Determines if an individual entry within a store can have a password. |
 
    The Basic tab should look like this:
@@ -161,7 +161,7 @@ the Keyfactor Command Portal
    | ServerUsername | Server Username | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. | Secret |  | 🔲 Unchecked |
    | ServerPassword | Server Password | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. | Secret |  | 🔲 Unchecked |
    | linkToIssuer | Link To Issuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. | Bool | false | 🔲 Unchecked |
-   | timeout | API Timeout in seconds | Determines timeout in seconds for all Citrix ADC API calls. | String | 3600 | 🔲 Unchecked |
+   | timeout | Login Timeout in seconds | Determines timeout in seconds for all Citrix ADC API calls. | String | 3600 | 🔲 Unchecked |
 
    The Custom Fields tab should look like this:
 
@@ -196,7 +196,7 @@ the Keyfactor Command Portal
 
 
 
-   ###### API Timeout in seconds
+   ###### Login Timeout in seconds
    Determines timeout in seconds for all Citrix ADC API calls.
 
    ![CitrixAdc Custom Field - timeout](docsource/images/CitrixAdc-custom-field-timeout-dialog.png)
@@ -308,6 +308,7 @@ An optional config.json configuration file has been provided in the extensions f
    | Container | Optional container to associate certificate store with. |
    | Client Machine | The DNS or IP Address of the Citrix ADC Appliance. |
    | Store Path | The path where certificate files are located on the Citrix ADC appliance.  This value will likely be /nsconfig/ssl/ |
+   | Store Password | Enter a password that matches your Citrix validation rules to encrypt private keys when adding/replacing certificates.  Select 'No Value' if you desire an unencrypted private key to be uploaded. |
    | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
    | ServerUsername | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
@@ -337,6 +338,7 @@ An optional config.json configuration file has been provided in the extensions f
    | Container | Optional container to associate certificate store with. |
    | Client Machine | The DNS or IP Address of the Citrix ADC Appliance. |
    | Store Path | The path where certificate files are located on the Citrix ADC appliance.  This value will likely be /nsconfig/ssl/ |
+   | Store Password | Enter a password that matches your Citrix validation rules to encrypt private keys when adding/replacing certificates.  Select 'No Value' if you desire an unencrypted private key to be uploaded. |
    | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
    | Properties.ServerUsername | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | Properties.ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
@@ -361,6 +363,7 @@ If a PAM provider was installed _on the Universal Orchestrator_ in the [Installa
    | --------- | ----------- |
    | ServerUsername | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
+   | StorePassword | Enter a password that matches your Citrix validation rules to encrypt private keys when adding/replacing certificates.  Select 'No Value' if you desire an unencrypted private key to be uploaded. |
 
 Please refer to the **Universal Orchestrator (remote)** usage section ([PAM providers on the Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam)) for your selected PAM provider for instructions on how to load attributes orchestrator-side.
 > Any secret can be rendered by a PAM provider _installed on the Keyfactor Command server_. The above parameters are specific to attributes that can be fetched by an installed PAM provider running on the Universal Orchestrator server itself.
