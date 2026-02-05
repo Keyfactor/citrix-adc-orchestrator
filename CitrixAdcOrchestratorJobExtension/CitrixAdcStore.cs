@@ -135,13 +135,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         public void Login()
         {
             Logger.MethodEntry(LogLevel.Debug);
+            Logger.LogTrace($"Timeout Value Used: {_timeout}");
             _nss ??= new nitro_service(_clientMachine, _useSsl ? "https" : "http");
             _nss.set_timeout(_timeout);
 
             base_response response = null;
             try
             {
-                response = _nss.login(_username, _password);
+                response = _nss.login(_username, _password, _timeout);
                 Logger.LogDebug($"Login Response: {JsonConvert.SerializeObject(response)}");
             }
             catch (Exception ex)
