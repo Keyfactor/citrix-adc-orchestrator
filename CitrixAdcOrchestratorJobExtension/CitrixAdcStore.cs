@@ -52,7 +52,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         public readonly string StorePath;
         private readonly string _username;
         private readonly bool _useSsl;
-        private readonly uint _timeout;
+        private uint _timeout;
 
         private nitro_service _nss;
 
@@ -63,12 +63,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 Logger = LogHandler.GetClassLogger<CitrixAdcStore>();
                 Logger.MethodEntry(LogLevel.Debug);
 
-                dynamic properties = JsonConvert.DeserializeObject(config.CertificateStoreDetails.Properties.ToString());
-                if (!UInt32.TryParse((properties.timeout == null || string.IsNullOrEmpty(properties.timeout.Value) ? DefaultTimeout : properties.timeout.Value), out _timeout))
-                {
-                    Logger.LogWarning($"Invalid Custom Field 'timeout' value {properties.timeout.Value}.  Value must be an integer.  Will use default value of {DefaultTimeout.ToString()}");
-                    _timeout = Convert.ToUInt32(DefaultTimeout);
-                }
+                SetTimeout(JsonConvert.DeserializeObject(config.CertificateStoreDetails.Properties.ToString()));
 
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
                 StorePath = StripTrailingSlash(config.CertificateStoreDetails.StorePath);
@@ -102,6 +97,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 Logger = LogHandler.GetClassLogger<CitrixAdcStore>();
                 Logger.MethodEntry(LogLevel.Debug);
+
+                SetTimeout(JsonConvert.DeserializeObject(config.CertificateStoreDetails.Properties.ToString()));
 
                 _clientMachine = config.CertificateStoreDetails.ClientMachine;
                 StorePath = StripTrailingSlash(config.CertificateStoreDetails.StorePath);
@@ -634,6 +631,15 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             finally
             {
                 Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        private void SetTimeout(dynamic properties)
+        {
+            if (!UInt32.TryParse((properties.timeout == null || string.IsNullOrEmpty(properties.timeout.Value) ? DefaultTimeout : properties.timeout.Value), out _timeout))
+            {
+                Logger.LogWarning($"Invalid Custom Field 'timeout' value {properties.timeout.Value}.  Value must be an integer.  Will use default value of {DefaultTimeout.ToString()}");
+                _timeout = Convert.ToUInt32(DefaultTimeout);
             }
         }
 
