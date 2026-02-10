@@ -31,11 +31,15 @@
                         "Enrollment": false,
                         "Remove": true
                     },
-                    "PasswordOptions": {
-                        "EntrySupported": false,
-                        "StoreRequired": false,
-                        "Style": "Default"
-                    },
+                  "PasswordOptions": {
+                    "Style": "Default",
+                    "EntrySupported": false,
+                    "StoreRequired": true,
+                    "StorePassword": {
+                      "Description": "Enter a password that matches your Citrix validation rules to encrypt private keys when adding/replacing certificates.  Select 'No Value' if you desire an unencrypted private key to be uploaded.",
+                      "IsPAMEligible": true
+                    }
+                  },
                   "Properties": [
                     {
                       "Name": "ServerUsername",
@@ -65,6 +69,15 @@
                       "DefaultValue": "false",
                       "Required": false,
                       "Description": "Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate."
+                    },
+                    {
+                      "Name": "timeout",
+                      "DisplayName": "Login Timeout in seconds",
+                      "Type": "String",
+                      "DependsOn": "",
+                      "DefaultValue": "3600",
+                      "Required": false,
+                      "Description": "Determines timeout in seconds for all Citrix ADC API calls."
                     }
                   ],
                     "EntryParameters": [
