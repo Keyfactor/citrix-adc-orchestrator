@@ -40,6 +40,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         private string ServerPassword { get; set; }
 
+        private string StorePassword { get; set; }
+
         public Management(IPAMSecretResolver resolver)
         {
             this.resolver = resolver;
@@ -61,6 +63,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
             ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
+            StorePassword = ResolvePamField("StorePassword", jobConfiguration.CertificateStoreDetails.StorePassword);
+
+            dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
+            var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
 
             ApplicationSettings.Initialize(this.GetType().Assembly.Location);
 
@@ -88,9 +94,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         _logger.LogDebug("Begin Add...");
                         var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
                         var sniCert = (string)jobConfiguration.JobProperties["sniCert"];
-
-                        dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
-                        var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
 
                         _logger.LogTrace($"alias: {jobConfiguration.JobCertificate.Alias} virtualServerName {virtualServerName}");
 
@@ -126,7 +129,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             }
                         }
 
-                        PerformAdd(store, jobConfiguration.JobCertificate, virtualServerNames,
+                        PerformAdd(store, jobConfiguration.JobCertificate, StorePassword, virtualServerNames,
                             aliasExists, jobConfiguration.Overwrite, sniCerts, linkToIssuer);
 
                         if (ApplicationSettings.AutoSaveConfig)
@@ -162,7 +165,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     Result = OrchestratorJobStatusJobResult.Warning,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = ex.Message
+                    FailureMessage = LogHandler.FlattenException(ex, true)
                 };
             }
             catch (Exception ex)
@@ -172,7 +175,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     Result = OrchestratorJobStatusJobResult.Failure,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = ex.Message
+                    FailureMessage = LogHandler.FlattenException(ex, true)
                 };
             }
 
@@ -191,15 +194,15 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return result;
         }
 
-        private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert,
+        private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string storePassword,
             List<string> virtualServerNames, bool aliasExists, bool overwrite, List<bool> sniCerts, bool linkToIssuer)
         {
             _logger.MethodEntry(LogLevel.Debug);
 
             _logger.LogDebug("Updating keyPair");
 
-            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, cert.Alias, overwrite); 
-            store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename);
+            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, storePassword, cert.Alias, overwrite); 
+            store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename, storePassword);
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
