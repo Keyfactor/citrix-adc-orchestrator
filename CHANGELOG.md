@@ -1,3 +1,7 @@
+3.0.0
+* Add StorePassword as an option to allow clients to encrypt private keys with passwords in situations where their Citrix settings require a password protected key
+* Add optional custom field to set timeout for login
+
 2.2.1
 * Add ServerUsername and ServerPassword to the integration-manifest.json to add both fields to the README documentation. 
 
