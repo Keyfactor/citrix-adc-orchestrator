@@ -20,10 +20,7 @@ using Keyfactor.Orchestrators.Extensions.Interfaces;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.IO;
-using static Org.BouncyCastle.Math.EC.ECCurve;
-using com.citrix.netscaler.nitro.resource.config.pq;
 using System.Collections.Generic;
-using com.citrix.netscaler.nitro.resource.config.ssl;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -52,7 +49,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         private string ResolvePamField(string name, string value)
         {
             _logger.LogTrace($"Attempting to resolved PAM eligible field {name}");
-            return resolver.Resolve(value);
+            return string.IsNullOrEmpty(value) ? value : resolver.Resolve(value);
         }
 
         public JobResult ProcessJob(ManagementJobConfiguration jobConfiguration)
