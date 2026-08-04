@@ -311,10 +311,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     cert = certFileName,
                     key = keyFileName,
                     inform = "PEM",
-                    nodomaincheck = true,
-                    passplain = keyPassword,
-                    password = keyPassword == null ? null : false
+                    nodomaincheck = true
                 };
+                if (!string.IsNullOrEmpty(keyPassword))
+                {
+                    certKeyObject.passplain = keyPassword;
+                    certKeyObject.password = true;
+                }
                 
                 var filters = new filtervalue[1];
                 filters[0] = new filtervalue("certKey", keyPairName);
