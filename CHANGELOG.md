@@ -1,3 +1,6 @@
+3.0.1
+* Bug Fix: Error when StorePassword is set to no value
+
 3.0.0
 * Add StorePassword as an option to allow clients to encrypt private keys with passwords in situations where their Citrix settings require a password protected key
 * Add optional custom field to set timeout for login
