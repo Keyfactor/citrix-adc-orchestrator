@@ -85,7 +85,7 @@ create_store_type "CitrixAdc" '{
     "Add": true,
     "Create": false,
     "Discovery": false,
-    "Enrollment": false,
+    "Enrollment": true,
     "Remove": true
   },
   "PasswordOptions": {

@@ -58,6 +58,7 @@ API Endpoint|Methods
 /nitro/v1/config/lbvserver| get
 /nitro/v1/config/sslcertkey| get, update, add, delete
 /nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
+/nitro/v1/config/sslcertreq| add
 /nitro/v1/config/systemfile| get, add, delete
 
 Here is a sample policy with Min Permissions:
@@ -85,7 +86,7 @@ To use the Citrix Netscaler Universal Orchestrator extension, you **must** creat
 | Add          | ✅ Checked        |
 | Remove       | ✅ Checked     |
 | Discovery    | 🔲 Unchecked  |
-| Reenrollment | 🔲 Unchecked |
+| Reenrollment | ✅ Checked |
 | Create       | 🔲 Unchecked     |
 
 #### Store Type Creation
@@ -128,7 +129,7 @@ the Keyfactor Command Portal
    | Supports Add | ✅ Checked | Check the box. Indicates that the Store Type supports Management Add |
    | Supports Remove | ✅ Checked | Check the box. Indicates that the Store Type supports Management Remove |
    | Supports Discovery | 🔲 Unchecked |  Indicates that the Store Type supports Discovery |
-   | Supports Reenrollment | 🔲 Unchecked |  Indicates that the Store Type supports Reenrollment |
+   | Supports Reenrollment | ✅ Checked |  Indicates that the Store Type supports Reenrollment |
    | Supports Create | 🔲 Unchecked |  Indicates that the Store Type supports store creation |
    | Needs Server | ✅ Checked | Determines if a target server name is required when creating store |
    | Blueprint Allowed | 🔲 Unchecked | Determines if store type may be included in an Orchestrator blueprint |
@@ -160,7 +161,7 @@ the Keyfactor Command Portal
    | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
    | ServerUsername | Server Username | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. | Secret |  | 🔲 Unchecked |
    | ServerPassword | Server Password | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. | Secret |  | 🔲 Unchecked |
-   | linkToIssuer | Link To Issuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. | Bool | false | 🔲 Unchecked |
+   | linkToIssuer | Link To Issuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate. | Bool | false | 🔲 Unchecked |
    | timeout | Login Timeout in seconds | Determines timeout in seconds for all Citrix ADC API calls. | String | 3600 | 🔲 Unchecked |
 
    The Custom Fields tab should look like this:
@@ -189,7 +190,7 @@ the Keyfactor Command Portal
 
 
    ###### Link To Issuer
-   Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate.
+   Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate.
 
    ![CitrixAdc Custom Field - linkToIssuer](docsource/images/CitrixAdc-custom-field-linkToIssuer-dialog.png)
    ![CitrixAdc Custom Field - linkToIssuer](docsource/images/CitrixAdc-custom-field-linkToIssuer-validation-options-dialog.png)
@@ -312,7 +313,7 @@ An optional config.json configuration file has been provided in the extensions f
    | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
    | ServerUsername | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
-   | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+   | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate. |
    | timeout | Determines timeout in seconds for all Citrix ADC API calls. |
 
 </details>
@@ -342,7 +343,7 @@ An optional config.json configuration file has been provided in the extensions f
    | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
    | Properties.ServerUsername | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | Properties.ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
-   | Properties.linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+   | Properties.linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate. |
    | Properties.timeout | Determines timeout in seconds for all Citrix ADC API calls. |
 
 3. **Import the CSV file to create the certificate stores**
@@ -383,6 +384,8 @@ Please refer to the **Universal Orchestrator (remote)** usage section ([PAM prov
 * Direct PFX Binding Inventory: In NetScaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in NetScaler is descibed in this [NetScaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
 
 * Removing Certs from Store: Certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server first and then remove via the Command and this orchestrator extension.
+
+* Reenrollment (On-Device Key Generation/ODKG): Reenrollment generates the CSR directly on the Citrix ADC appliance using the private key already associated with the target alias, and the private key never leaves the appliance. This requires a certificate-key pair with an existing private key to already exist under the alias being reenrolled; reenrollment cannot be used to create a brand new alias. The renewed certificate replaces the existing certificate for that alias in place, so any existing virtual server bindings are preserved automatically.
 
 
 ## License
