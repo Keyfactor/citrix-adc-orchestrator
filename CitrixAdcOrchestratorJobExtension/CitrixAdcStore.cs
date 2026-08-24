@@ -260,10 +260,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     throw new Exception($"Key type {keyType} is not supported for on-device key generation (ODKG) reenrollment on the Citrix ADC appliance.  Only RSA is currently supported.");
                 }
 
-                sslcertkey existingKeyPair = GetKeyPairByName(alias);
-                string keyFileName = existingKeyPair != null && !string.IsNullOrEmpty(existingKeyPair.key)
-                    ? Path.GetFileName(existingKeyPair.key)
-                    : CreateRsaKey(alias, keySize, storePassword);
+                string keyFileName = CreateRsaKey(alias, keySize, storePassword);
 
                 string[] subjectParams = (subjectText ?? string.Empty).Split(',');
                 Dictionary<string, string> subjectValues = new Dictionary<string, string>();
@@ -275,7 +272,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         subjectValues[subjectPair[0].Trim().ToUpperInvariant()] = subjectPair[1].Trim();
                 }
 
-                string csrFileName = alias + ALIAS_CSR_SUFFIX;
+                string csrFileName = Path.GetFileNameWithoutExtension(keyFileName) + ALIAS_CSR_SUFFIX;
 
                 sslcertreq csrRequest = new sslcertreq()
                 {
@@ -322,39 +319,62 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             try
             {
-                string keyFileName = alias + ".key";
-
-                sslrsakey rsaKeyRequest = new sslrsakey()
-                {
-                    keyfile = keyFileName,
-                    bits = keySize.HasValue ? Convert.ToUInt32(keySize.Value) : Convert.ToUInt32(DefaultKeySize),
-                    exponent = DefaultRsaExponent,
-                    keyform = "PEM"
-                };
-
-                if (!string.IsNullOrEmpty(keyPassword))
-                {
-                    rsaKeyRequest.des3 = true;
-                    rsaKeyRequest.password = keyPassword;
-                }
-
-                base_response response = sslrsakey.create(_nss, rsaKeyRequest);
-                if (response != null && response.errorcode != 0)
-                {
-                    throw new Exception($"Error generating new RSA key for alias {alias}: {response.message}");
-                }
-
-                return keyFileName;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError($"Error Occurred in CreateRsaKey(): {LogHandler.FlattenException(e)}");
-                throw;
+                return CreateRsaKey(alias, keySize, keyPassword, 0);
             }
             finally
             {
                 Logger.MethodExit(LogLevel.Debug);
             }
+        }
+
+        private string CreateRsaKey(string alias, int? keySize, string keyPassword, int fileNameSuffix)
+        {
+            if (fileNameSuffix > 50)
+            {
+                string errMessage = $"Too many attempts (50) to generate a new RSA key for {alias}";
+                Logger.LogError(errMessage);
+                throw new Exception(errMessage);
+            }
+
+            string fileNameSuffixString = fileNameSuffix == 0 ? string.Empty : fileNameSuffix.ToString();
+            string keyFileName = alias + fileNameSuffixString + ".key";
+
+            sslrsakey rsaKeyRequest = new sslrsakey()
+            {
+                keyfile = keyFileName,
+                bits = keySize.HasValue ? Convert.ToUInt32(keySize.Value) : Convert.ToUInt32(DefaultKeySize),
+                exponent = DefaultRsaExponent,
+                keyform = "PEM"
+            };
+
+            if (!string.IsNullOrEmpty(keyPassword))
+            {
+                rsaKeyRequest.des3 = true;
+                rsaKeyRequest.password = keyPassword;
+            }
+
+            try
+            {
+                base_response response = sslrsakey.create(_nss, rsaKeyRequest);
+                if (response != null && response.errorcode != 0)
+                {
+                    throw new Exception($"Error generating new RSA key for alias {alias}: {response.message}");
+                }
+            }
+            catch (nitro_exception ne)
+            {
+                if (ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists"))
+                {
+                    Logger.LogTrace($"Key file {keyFileName} already exists.  Trying again with new name.");
+                    return CreateRsaKey(alias, keySize, keyPassword, fileNameSuffix + 1);
+                }
+
+                string error = $"Error generating new RSA key for alias {alias}: {ne.Message}";
+                Logger.LogError(error);
+                throw new Exception(error, ne);
+            }
+
+            return keyFileName;
         }
 
         public sslcertkey[] GetCertificates()
