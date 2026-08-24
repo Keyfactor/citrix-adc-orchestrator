@@ -386,7 +386,7 @@ Please refer to the **Universal Orchestrator (remote)** usage section ([PAM prov
 
 * Removing Certs from Store: Certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server first and then remove via the Command and this orchestrator extension.
 
-* Reenrollment (On-Device Key Generation/ODKG): Reenrollment generates the CSR directly on the Citrix ADC appliance, and the private key never leaves the appliance. If a certificate-key pair already exists under the target alias, the existing private key is reused unless Overwrite is set to True; if the alias does not yet exist, a new RSA key pair is generated on the appliance. Existing aliases require Overwrite to be set to True in order to be reenrolled. Only RSA keys are currently supported for ODKG reenrollment. The renewed certificate replaces the existing certificate for that alias in place, so any existing virtual server bindings are preserved automatically.
+* Reenrollment (On-Device Key Generation/ODKG): Reenrollment always generates a brand new RSA key pair and CSR directly on the Citrix ADC appliance, and the private key never leaves the appliance. If the target alias already exists, Overwrite must be set to True; the new key and certificate then replace the existing key and certificate for that alias in place, so any existing virtual server bindings are preserved automatically. The previous key and certificate files remain on the appliance's filesystem and are not automatically deleted. Only RSA keys are currently supported for ODKG reenrollment.
 
 
 ## License
