@@ -15,7 +15,6 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
-using com.citrix.netscaler.nitro.resource.config.ssl;
 using com.citrix.netscaler.nitro.resource.config.system;
 using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Common.Enums;
@@ -88,9 +87,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             try
             {
-                if (!store.AliasExists(jobConfiguration.Alias))
+                if (store.AliasExists(jobConfiguration.Alias) && !jobConfiguration.Overwrite)
                 {
-                    string errorMessage = $"Alias {jobConfiguration.Alias} does not exist.  On-device key generation (ODKG) reenrollment requires an existing certificate-key pair on the Citrix ADC appliance.";
+                    string errorMessage = $"Alias {jobConfiguration.Alias} already exists.  Overwrite must be set to True if you wish to perform reenrollment on an existing alias.";
                     _logger.LogError(errorMessage);
                     return new JobResult
                     {
@@ -103,6 +102,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 string subjectText = !jobConfiguration.JobProperties.ContainsKey("subjectText") || jobConfiguration.JobProperties["subjectText"] == null
                     ? string.Empty
                     : jobConfiguration.JobProperties["subjectText"].ToString();
+
+                string keyType = !jobConfiguration.JobProperties.ContainsKey("keyType") || jobConfiguration.JobProperties["keyType"] == null
+                    ? string.Empty
+                    : jobConfiguration.JobProperties["keyType"].ToString();
+
+                int? keySize = !jobConfiguration.JobProperties.ContainsKey("keySize") || jobConfiguration.JobProperties["keySize"] == null || string.IsNullOrEmpty(jobConfiguration.JobProperties["keySize"].ToString())
+                    ? null
+                    : Convert.ToInt32(jobConfiguration.JobProperties["keySize"]);
 
                 string sans = string.Empty;
                 if (jobConfiguration.SANs != null && jobConfiguration.SANs.Count > 0)
@@ -119,8 +126,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         sans = sans.Substring(0, sans.Length - 1);
                 }
 
-                _logger.LogDebug("Generating CSR on Citrix ADC appliance using existing on-device key...");
-                string csr = store.GenerateCSR(jobConfiguration.Alias, subjectText, sans, StorePassword);
+                _logger.LogDebug("Generating CSR on Citrix ADC appliance...");
+                (string csr, string keyFileName) = store.GenerateCSR(jobConfiguration.Alias, subjectText, sans, StorePassword, keyType, keySize);
 
                 X509Certificate2 cert = submitReenrollment.Invoke(csr);
                 if (cert == null)
@@ -137,10 +144,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 string certPem = CryptographicObjectFormatter.PEM.Format(DotNetUtilities.FromX509Certificate(cert), false);
 
-                sslcertkey existingKeyPair = store.GetKeyPairByName(jobConfiguration.Alias);
                 systemfile certificateFile = store.UploadCertificateFile(jobConfiguration.Alias, certPem);
 
-                store.UpdateKeyPair(jobConfiguration.Alias, certificateFile.filename, existingKeyPair.key, StorePassword);
+                store.UpdateKeyPair(jobConfiguration.Alias, certificateFile.filename, keyFileName, StorePassword);
 
                 if (linkToIssuer)
                 {
