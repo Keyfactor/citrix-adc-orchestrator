@@ -13,6 +13,7 @@ API Endpoint|Methods
 /nitro/v1/config/lbvserver| get
 /nitro/v1/config/sslcertkey| get, update, add, delete
 /nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
+/nitro/v1/config/sslcertreq| add
 /nitro/v1/config/systemfile| get, add, delete
 
 Here is a sample policy with Min Permissions:
@@ -34,3 +35,5 @@ An optional config.json configuration file has been provided in the extensions f
 * Direct PFX Binding Inventory: In NetScaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in NetScaler is descibed in this [NetScaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
 
 * Removing Certs from Store: Certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server first and then remove via the Command and this orchestrator extension.
+
+* Reenrollment (On-Device Key Generation/ODKG): Reenrollment generates the CSR directly on the Citrix ADC appliance using the private key already associated with the target alias, and the private key never leaves the appliance. This requires a certificate-key pair with an existing private key to already exist under the alias being reenrolled; reenrollment cannot be used to create a brand new alias. The renewed certificate replaces the existing certificate for that alias in place, so any existing virtual server bindings are preserved automatically.

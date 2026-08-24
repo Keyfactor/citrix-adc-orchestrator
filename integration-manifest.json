@@ -28,7 +28,7 @@
                         "Add": true,
                         "Create": false,
                         "Discovery": false,
-                        "Enrollment": false,
+                        "Enrollment": true,
                         "Remove": true
                     },
                   "PasswordOptions": {
@@ -68,7 +68,7 @@
                       "DependsOn": "",
                       "DefaultValue": "false",
                       "Required": false,
-                      "Description": "Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate."
+                      "Description": "Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate."
                     },
                     {
                       "Name": "timeout",

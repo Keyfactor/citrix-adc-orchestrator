@@ -42,6 +42,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
     internal class CitrixAdcStore
     {
         private const string DefaultTimeout = "3600";
+        private const string ALIAS_CSR_SUFFIX = ".csr";
         public static readonly string StoreType = "CitrixAdc";
 
         private readonly string _clientMachine;
@@ -118,6 +119,41 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 Logger.LogError(
                     $"Error Occured in CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config): {LogHandler.FlattenException(e)}");
+                throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        public CitrixAdcStore(ReenrollmentJobConfiguration config, string serverUserName, string serverPassword)
+        {
+            try
+            {
+                Logger = LogHandler.GetClassLogger<CitrixAdcStore>();
+                Logger.MethodEntry(LogLevel.Debug);
+
+                SetTimeout(JsonConvert.DeserializeObject(config.CertificateStoreDetails.Properties.ToString()));
+
+                _clientMachine = config.CertificateStoreDetails.ClientMachine;
+                StorePath = StripTrailingSlash(config.CertificateStoreDetails.StorePath);
+                _useSsl = config.UseSSL;
+                _username = serverUserName;
+                _password = serverPassword;
+                var o = new systemfile_args();
+
+                Logger.LogTrace($"UrlPath: {StorePath}");
+                o.filelocation = StorePath;
+
+                nitroServiceOptions = o;
+                Logger.LogDebug(
+                    "Exit CitrixAdcStore(ReenrollmentJobConfiguration config) : this((JobConfiguration) config) Constructor...");
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(
+                    $"Error Occured in CitrixAdcStore(ReenrollmentJobConfiguration config) : this((JobConfiguration) config): {LogHandler.FlattenException(e)}");
                 throw;
             }
             finally
@@ -203,6 +239,69 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             catch (Exception e)
             {
                 Logger.LogError($"Error in GetKeyPairName(): {LogHandler.FlattenException(e)}");
+                throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        public string GenerateCSR(string alias, string subjectText, string sans, string storePassword)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                sslcertkey existingKeyPair = GetKeyPairByName(alias);
+                if (existingKeyPair == null || string.IsNullOrEmpty(existingKeyPair.key))
+                {
+                    throw new Exception($"No existing certificate-key pair with a private key found for alias {alias}.  On-device key generation (ODKG) reenrollment requires an existing key on the Citrix ADC appliance.");
+                }
+
+                string[] subjectParams = (subjectText ?? string.Empty).Split(',');
+                Dictionary<string, string> subjectValues = new Dictionary<string, string>();
+                foreach (string subjectParam in subjectParams)
+                {
+                    if (string.IsNullOrWhiteSpace(subjectParam)) continue;
+                    string[] subjectPair = subjectParam.Split(new[] { '=' }, 2);
+                    if (subjectPair.Length == 2)
+                        subjectValues[subjectPair[0].Trim().ToUpperInvariant()] = subjectPair[1].Trim();
+                }
+
+                string csrFileName = alias + ALIAS_CSR_SUFFIX;
+
+                sslcertreq csrRequest = new sslcertreq()
+                {
+                    reqfile = csrFileName,
+                    keyfile = Path.GetFileName(existingKeyPair.key),
+                    keyform = "PEM",
+                    commonname = subjectValues.ContainsKey("CN") ? subjectValues["CN"] : null,
+                    organizationname = subjectValues.ContainsKey("O") ? subjectValues["O"] : null,
+                    organizationunitname = subjectValues.ContainsKey("OU") ? subjectValues["OU"] : null,
+                    countryname = subjectValues.ContainsKey("C") ? subjectValues["C"] : null,
+                    statename = subjectValues.ContainsKey("ST") ? subjectValues["ST"] : null,
+                    localityname = subjectValues.ContainsKey("L") ? subjectValues["L"] : null,
+                    emailaddress = subjectValues.ContainsKey("E") ? subjectValues["E"] : null,
+                    subjectaltname = string.IsNullOrEmpty(sans) ? null : sans,
+                    pempassphrase = string.IsNullOrEmpty(storePassword) ? null : storePassword
+                };
+
+                base_response response = sslcertreq.create(_nss, csrRequest);
+                if (response != null && response.errorcode != 0)
+                {
+                    throw new Exception($"Error generating CSR for alias {alias}: {response.message}");
+                }
+
+                systemfile csrFile = GetSystemFile(csrFileName);
+                byte[] csrBytes = Convert.FromBase64String(csrFile.filecontent);
+                string csrContents = Encoding.Default.GetString(csrBytes);
+
+                return csrContents;
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error Occurred in GenerateCSR(): {LogHandler.FlattenException(e)}");
                 throw;
             }
             finally
@@ -441,20 +540,38 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
         {
             Logger.MethodEntry(LogLevel.Debug);
 
-            sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
-            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
-
             X509Certificate2Collection x509CertCollection = new X509Certificate2Collection();
             x509CertCollection.Import(Convert.FromBase64String(cert), privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
 
             X509Certificate2 issuingCert = x509CertCollection.First(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
+
+            LinkToIssuer(keyPairName, candidate => candidate.Thumbprint == issuingCert.Thumbprint);
+
+            Logger.MethodExit(LogLevel.Debug);
+        }
+
+        public void LinkToIssuer(X509Certificate2 leafCertWithoutChain, string keyPairName)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            LinkToIssuer(keyPairName, candidate => candidate.Subject == leafCertWithoutChain.Issuer);
+
+            Logger.MethodExit(LogLevel.Debug);
+        }
+
+        private void LinkToIssuer(string keyPairName, Func<X509Certificate2, bool> isIssuer)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
+            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
 
             if (chain.chaincomplete == 1)
             {
                 foreach (string chainCertAlias in chain.chainlinked)
                 {
                     X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
-                    if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                    if (isIssuer(x509ChainCert))
                     {
                         return;
                     }
@@ -472,7 +589,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             foreach (string chainCertAlias in chain.chainpossiblelinks)
             {
                 X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
-                if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                if (isIssuer(x509ChainCert))
                 {
                     chainCertName = chainCertAlias;
                     break;
@@ -630,6 +747,20 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 Logger.LogError($"Error in UploadCertificate(): {LogHandler.FlattenException(e)}");
                 throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        public systemfile UploadCertificateFile(string alias, string pemCertificate)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                return UploadFile(alias, pemCertificate, true, 0);
             }
             finally
             {
