@@ -62,7 +62,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             if (string.IsNullOrEmpty(jobConfiguration.Alias))
             {
-                string errorMessage = "Error performing reenrollment.  Alias is required.";
+                string errorMessage = "Error performing ODKG.  Alias is required.";
                 _logger.LogError(errorMessage);
                 return new JobResult
                 {
