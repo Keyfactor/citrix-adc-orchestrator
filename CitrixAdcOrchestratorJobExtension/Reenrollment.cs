@@ -89,7 +89,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 if (store.AliasExists(jobConfiguration.Alias) && !jobConfiguration.Overwrite)
                 {
-                    string errorMessage = $"Alias {jobConfiguration.Alias} already exists.  Overwrite must be set to True if you wish to perform reenrollment on an existing alias.";
+                    string errorMessage = $"Alias {jobConfiguration.Alias} already exists.  Overwrite must be set to True if you wish to perform ODKG on an existing alias.";
                     _logger.LogError(errorMessage);
                     return new JobResult
                     {
@@ -158,6 +158,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     _logger.LogDebug("Saving configuration...");
                     store.SaveConfiguration();
                 }
+
+                JobResult result = new JobResult
+                {
+                    Result = OrchestratorJobStatusJobResult.Success,
+                    JobHistoryId = jobConfiguration.JobHistoryId
+                };
+
+                return result;
             }
             catch (LinkException ex)
             {
@@ -178,20 +186,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     FailureMessage = LogHandler.FlattenException(ex, true)
                 };
             }
-
-            JobResult result = new JobResult
+            finally
             {
-                Result = OrchestratorJobStatusJobResult.Success,
-                JobHistoryId = jobConfiguration.JobHistoryId
-            };
-
-            _logger.LogDebug("Logging out of Citrix...");
-            store.Logout();
-
-            _logger.LogDebug("Exiting ProcessJob");
-            _logger.MethodExit(LogLevel.Debug);
-
-            return result;
+                store.Logout();
+                _logger.MethodExit(LogLevel.Debug);
+            }
         }
     }
 }
