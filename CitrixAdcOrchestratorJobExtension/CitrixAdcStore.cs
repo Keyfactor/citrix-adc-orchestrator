@@ -255,12 +255,19 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             try
             {
-                if (!string.IsNullOrEmpty(keyType) && !keyType.Equals("RSA", StringComparison.OrdinalIgnoreCase))
+                string keyFileName;
+                if (string.IsNullOrEmpty(keyType) || keyType.Equals("RSA", StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new Exception($"Key type {keyType} is not supported for on-device key generation (ODKG) reenrollment on the Citrix ADC appliance.  Only RSA is currently supported.");
+                    keyFileName = CreateRsaKey(alias, keySize, storePassword);
                 }
-
-                string keyFileName = CreateRsaKey(alias, keySize, storePassword);
+                else if (keyType.Equals("ECC", StringComparison.OrdinalIgnoreCase) || keyType.Equals("EC", StringComparison.OrdinalIgnoreCase))
+                {
+                    keyFileName = CreateEcdsaKey(alias, keySize, storePassword);
+                }
+                else
+                {
+                    throw new Exception($"Key type {keyType} is not supported for on-device key generation (ODKG) reenrollment on the Citrix ADC appliance.  Only RSA and ECC are currently supported.");
+                }
 
                 string[] subjectParams = (subjectText ?? string.Empty).Split(',');
                 Dictionary<string, string> subjectValues = new Dictionary<string, string>();
@@ -370,6 +377,82 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 }
 
                 string error = $"Error generating new RSA key for alias {alias}: {ne.Message}";
+                Logger.LogError(error);
+                throw new Exception(error, ne);
+            }
+
+            return keyFileName;
+        }
+
+        private string CreateEcdsaKey(string alias, int? keySize, string keyPassword)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                string curve;
+                switch (keySize)
+                {
+                    case 256:
+                        curve = "P_256";
+                        break;
+                    case 384:
+                        curve = "P_384";
+                        break;
+                    default:
+                        throw new Exception($"ECC key size {keySize} is not supported for on-device key generation (ODKG) reenrollment on the Citrix ADC appliance.  Only 256 and 384-bit curves (P_256, P_384) are currently supported.");
+                }
+
+                return CreateEcdsaKey(alias, curve, keyPassword, 0);
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        private string CreateEcdsaKey(string alias, string curve, string keyPassword, int fileNameSuffix)
+        {
+            if (fileNameSuffix > 50)
+            {
+                string errMessage = $"Too many attempts (50) to generate a new ECDSA key for {alias}";
+                Logger.LogError(errMessage);
+                throw new Exception(errMessage);
+            }
+
+            string fileNameSuffixString = fileNameSuffix == 0 ? string.Empty : fileNameSuffix.ToString();
+            string keyFileName = alias + fileNameSuffixString + ".key";
+
+            sslecdsakey ecdsaKeyRequest = new sslecdsakey()
+            {
+                keyfile = keyFileName,
+                curve = curve,
+                keyform = "PEM"
+            };
+
+            if (!string.IsNullOrEmpty(keyPassword))
+            {
+                ecdsaKeyRequest.des3 = true;
+                ecdsaKeyRequest.password = keyPassword;
+            }
+
+            try
+            {
+                base_response response = sslecdsakey.create(_nss, ecdsaKeyRequest);
+                if (response != null && response.errorcode != 0)
+                {
+                    throw new Exception($"Error generating new ECDSA key for alias {alias}: {response.message}");
+                }
+            }
+            catch (nitro_exception ne)
+            {
+                if (ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists"))
+                {
+                    Logger.LogTrace($"Key file {keyFileName} already exists.  Trying again with new name.");
+                    return CreateEcdsaKey(alias, curve, keyPassword, fileNameSuffix + 1);
+                }
+
+                string error = $"Error generating new ECDSA key for alias {alias}: {ne.Message}";
                 Logger.LogError(error);
                 throw new Exception(error, ne);
             }
