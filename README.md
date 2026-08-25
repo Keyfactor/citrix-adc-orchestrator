@@ -213,8 +213,8 @@ the Keyfactor Command Portal
 
    | Name | Display Name | Description | Type | Default Value | Entry has a private key | Adding an entry | Removing an entry | Reenrolling an entry |
    | ---- | ------------ | ---- | ------------- | ----------------------- | ---------------- | ----------------- | ------------------- | ----------- |
-   | virtualServerName | Virtual Server Name | When adding a certificate, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-   | sniCert | SNI Cert | When adding a certificate, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
+   | virtualServerName | Virtual Server Name | When adding a certificate or reenrolling a new alias, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
+   | sniCert | SNI Cert | When adding a certificate or reenrolling a new alias, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
 
    The Entry Parameters tab should look like this:
 
@@ -222,14 +222,14 @@ the Keyfactor Command Portal
 
 
    ##### Virtual Server Name
-   When adding a certificate, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values.
+   When adding a certificate or reenrolling a new alias, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values.
 
    ![CitrixAdc Entry Parameter - virtualServerName](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-virtualServerName.png)
    ![CitrixAdc Entry Parameter - virtualServerName](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-virtualServerName-validation-options.png)
 
 
    ##### SNI Cert
-   When adding a certificate, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values.
+   When adding a certificate or reenrolling a new alias, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values.
 
    ![CitrixAdc Entry Parameter - sniCert](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-sniCert.png)
    ![CitrixAdc Entry Parameter - sniCert](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-sniCert-validation-options.png)
@@ -387,7 +387,7 @@ Please refer to the **Universal Orchestrator (remote)** usage section ([PAM prov
 
 * Removing Certs from Store: Certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server first and then remove via the Command and this orchestrator extension.
 
-* Reenrollment (On-Device Key Generation/ODKG): Reenrollment always generates a brand new key pair and CSR directly on the Citrix ADC appliance, and the private key never leaves the appliance. If the target alias already exists, Overwrite must be set to True; the new key and certificate then replace the existing key and certificate for that alias in place, so any existing virtual server bindings are preserved automatically. The previous key and certificate files remain on the appliance's filesystem and are not automatically deleted. Both RSA and ECC keys are supported; for ECC, only 256 and 384-bit curves (P_256, P_384) are supported by the Citrix ADC appliance for on-device key generation.
+* Reenrollment (On-Device Key Generation/ODKG): Reenrollment always generates a brand new key pair and CSR directly on the Citrix ADC appliance, and the private key never leaves the appliance. If the target alias already exists, Overwrite must be set to True; the new key and certificate then replace the existing key and certificate for that alias in place, so any existing virtual server bindings are preserved automatically. The previous key and certificate files remain on the appliance's filesystem and are not automatically deleted. Both RSA and ECC keys are supported; for ECC, only 256 and 384-bit curves (P_256, P_384) are supported by the Citrix ADC appliance for on-device key generation. When reenrolling a new alias (one that does not already exist), the virtualServerName and sniCert Entry Parameters can be used to bind the new certificate the same way they are used for Management-Add; they are ignored when reenrolling an existing alias since its bindings are unaffected.
 
 
 ## License

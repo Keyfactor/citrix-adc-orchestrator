@@ -120,7 +120,7 @@ create_store_type "CitrixAdc" '{
       "Name": "virtualServerName",
       "DisplayName": "Virtual Server Name",
       "Type": "String",
-      "Description": "When adding a certificate, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values.",
+      "Description": "When adding a certificate or reenrolling a new alias, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values.",
       "RequiredWhen": {
         "HasPrivateKey": false,
         "OnAdd": false,
@@ -132,7 +132,7 @@ create_store_type "CitrixAdc" '{
       "Name": "sniCert",
       "DisplayName": "SNI Cert",
       "Type": "String",
-      "Description": "When adding a certificate, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values.",
+      "Description": "When adding a certificate or reenrolling a new alias, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values.",
       "RequiredWhen": {
         "HasPrivateKey": false,
         "OnAdd": false,
