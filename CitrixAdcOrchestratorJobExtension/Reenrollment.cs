@@ -87,7 +87,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             try
             {
-                if (store.AliasExists(jobConfiguration.Alias) && !jobConfiguration.Overwrite)
+                bool aliasExists = store.AliasExists(jobConfiguration.Alias);
+
+                if (aliasExists && !jobConfiguration.Overwrite)
                 {
                     string errorMessage = $"Alias {jobConfiguration.Alias} already exists.  Overwrite must be set to True if you wish to perform ODKG on an existing alias.";
                     _logger.LogError(errorMessage);
@@ -97,6 +99,46 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         JobHistoryId = jobConfiguration.JobHistoryId,
                         FailureMessage = $"Site {jobConfiguration.CertificateStoreDetails.StorePath} on server {jobConfiguration.CertificateStoreDetails.ClientMachine}: {errorMessage}"
                     };
+                }
+
+                List<string> virtualServerNames = new List<string>();
+                List<bool> sniCerts = new List<bool>();
+
+                var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
+                var sniCert = (string)jobConfiguration.JobProperties["sniCert"];
+
+                _logger.LogTrace($"alias: {jobConfiguration.Alias} virtualServerName {virtualServerName}");
+
+                if (!aliasExists)
+                {
+                    if (!string.IsNullOrEmpty(virtualServerName))
+                    {
+                        foreach (string vsName in virtualServerName.Split(","))
+                            virtualServerNames.Add(vsName);
+                    }
+
+                    if (!string.IsNullOrEmpty(sniCert))
+                    {
+                        foreach (string sni in sniCert.Split(","))
+                        {
+                            bool blnSni;
+                            if (!Boolean.TryParse(sni.ToUpper(), out blnSni))
+                            {
+                                string errMessage = $"Invalid non boolean SNI value - {sni}";
+                                _logger.LogError(errMessage);
+                                throw new Exception(errMessage);
+                            }
+
+                            sniCerts.Add(blnSni);
+                        }
+                    }
+
+                    if (virtualServerNames.Count != sniCerts.Count)
+                    {
+                        string errMsg = $"Number of virtual server Names ({virtualServerNames.Count.ToString()}) does not match the number of SNI cert values ({sniCerts.Count.ToString()}";
+                        _logger.LogError(errMsg);
+                        throw new Exception(errMsg);
+                    }
                 }
 
                 string subjectText = !jobConfiguration.JobProperties.ContainsKey("subjectText") || jobConfiguration.JobProperties["subjectText"] == null
@@ -147,6 +189,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 systemfile certificateFile = store.UploadCertificateFile(jobConfiguration.Alias, certPem);
 
                 store.UpdateKeyPair(jobConfiguration.Alias, certificateFile.filename, keyFileName, StorePassword);
+
+                _logger.LogDebug("Updating cert bindings");
+                if (virtualServerNames.Count > 0)
+                    store.UpdateBindings(jobConfiguration.Alias, virtualServerNames, sniCerts);
 
                 if (linkToIssuer)
                 {
