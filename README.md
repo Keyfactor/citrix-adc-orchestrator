@@ -33,6 +33,7 @@
 
 The Citrix ADC Orchestrator remotely manages certificate objects on a Citrix ADC device.  Since the ADC supports services including: 
 Load Balancing, Authentication/Authorization/Auditing (AAA), and Gateways, this orchestrator can bind to any of these virtual servers when using unique virtual server names for each service.
+Starting with release 4.0.0, On Device Key Generation (ODKG) is also supported with the following keytypes/sizes supported/tested: RSA 1024, RSA 2048, RSA 3072, RSA 4096, ECDSA P-256, and ECDSA P-384.
 
 
 
