@@ -1,3 +1,6 @@
+4.0.0
+* Add support for On Device Key Generation (ODKG).  Supported/tested certificate configurations - RSA 1024, 2048, 3072, and 4096, ECDSA P-256, P-384.
+
 3.0.1
 * Bug Fix: Error when StorePassword is set to no value
 
