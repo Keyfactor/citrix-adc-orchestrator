@@ -260,7 +260,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     keyFileName = CreateRsaKey(alias, keySize, storePassword);
                 }
-                else if (keyType.Equals("ECC", StringComparison.OrdinalIgnoreCase) || keyType.Equals("EC", StringComparison.OrdinalIgnoreCase))
+                else if (keyType.Equals("ECC", StringComparison.OrdinalIgnoreCase) || keyType.Equals("EC", StringComparison.OrdinalIgnoreCase) || keyType.Equals("ECDSA", StringComparison.OrdinalIgnoreCase))
                 {
                     keyFileName = CreateEcdsaKey(alias, keySize, storePassword);
                 }
