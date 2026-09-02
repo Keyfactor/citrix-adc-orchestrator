@@ -191,13 +191,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 store.UpdateKeyPair(jobConfiguration.Alias, certificateFile.filename, keyFileName, StorePassword);
 
                 _logger.LogDebug("Updating cert bindings");
+                bool hasBindingErrors = false;
                 if (virtualServerNames.Count > 0)
-                    store.UpdateBindings(jobConfiguration.Alias, virtualServerNames, sniCerts);
-
-                if (linkToIssuer)
-                {
-                    store.LinkToIssuer(cert, jobConfiguration.Alias);
-                }
+                    hasBindingErrors = store.UpdateBindings(jobConfiguration.Alias, virtualServerNames, sniCerts);
 
                 if (ApplicationSettings.AutoSaveConfig)
                 {
@@ -207,20 +203,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 JobResult result = new JobResult
                 {
-                    Result = OrchestratorJobStatusJobResult.Success,
-                    JobHistoryId = jobConfiguration.JobHistoryId
+                    Result = hasBindingErrors == true ? OrchestratorJobStatusJobResult.Warning : OrchestratorJobStatusJobResult.Success,
+                    JobHistoryId = jobConfiguration.JobHistoryId,
+                    FailureMessage = hasBindingErrors == true ? $"Certificate was added successfully, but one or more errors occurred binding virtual servers.  Please see the orchestrator log for more details." : string.Empty
                 };
 
                 return result;
-            }
-            catch (LinkException ex)
-            {
-                return new JobResult
-                {
-                    Result = OrchestratorJobStatusJobResult.Warning,
-                    JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = LogHandler.FlattenException(ex, true)
-                };
             }
             catch (Exception ex)
             {

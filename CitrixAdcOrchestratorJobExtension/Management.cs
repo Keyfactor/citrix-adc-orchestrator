@@ -58,6 +58,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             _logger.LogDebug($"Begin {jobConfiguration.Capability} for job id {jobConfiguration.JobId}...");
             _logger.MethodEntry(LogLevel.Debug);
 
+            bool hasBindingError = false;
+            bool hasLinkError = false;
+
             ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
             ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
             StorePassword = ResolvePamField("StorePassword", jobConfiguration.CertificateStoreDetails.StorePassword);
@@ -126,8 +129,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                             }
                         }
 
-                        PerformAdd(store, jobConfiguration.JobCertificate, StorePassword, virtualServerNames,
+                        var addResult = PerformAdd(store, jobConfiguration.JobCertificate, StorePassword, virtualServerNames,
                             aliasExists, jobConfiguration.Overwrite, sniCerts, linkToIssuer);
+                        hasBindingError = addResult.Item1;
+                        hasLinkError = addResult.Item2;
 
                         if (ApplicationSettings.AutoSaveConfig)
                         {
@@ -155,16 +160,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         };
                 }
             }
-            catch (LinkException ex)
-            {
-                //Status: 2=Success, 3=Warning, 4=Error
-                return new JobResult
-                {
-                    Result = OrchestratorJobStatusJobResult.Warning,
-                    JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = LogHandler.FlattenException(ex, true)
-                };
-            }
             catch (Exception ex)
             {
                 //Status: 2=Success, 3=Warning, 4=Error
@@ -176,10 +171,21 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 };
             }
 
+            string errorMessage = string.Empty;
+            if (hasBindingError == true)
+            {
+                errorMessage += "The certificate was successfully added, but one or more virtual server bindings failed to update.  Please check the orchestrator log for more information. ";
+            }
+            if (hasLinkError == true)
+            {
+                errorMessage += "The certificate was successfully added, but no link was performed to the issuing certificate.  Please check the orchestrator log for more information. ";
+            }
+
             JobResult result = new JobResult
             {
-                Result = OrchestratorJobStatusJobResult.Success,
-                JobHistoryId = jobConfiguration.JobHistoryId
+                Result = hasBindingError == true || hasLinkError == true ? OrchestratorJobStatusJobResult.Warning : OrchestratorJobStatusJobResult.Success,
+                JobHistoryId = jobConfiguration.JobHistoryId,
+                FailureMessage = !string.IsNullOrEmpty(errorMessage) ? errorMessage : string.Empty
             };
 
             _logger.LogDebug("Logging out of Citrix...");
@@ -191,27 +197,32 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return result;
         }
 
-        private void PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string storePassword,
+        private (bool, bool) PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string storePassword,
             List<string> virtualServerNames, bool aliasExists, bool overwrite, List<bool> sniCerts, bool linkToIssuer)
         {
             _logger.MethodEntry(LogLevel.Debug);
 
-            _logger.LogDebug("Updating keyPair");
+            bool hasBindingError = false;
+            bool hasLinkError = false;
 
-            var (pemFile, privateKeyFile) = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, storePassword, cert.Alias, overwrite); 
+            var pemResult = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, storePassword, cert.Alias, overwrite);
+            var pemFile = pemResult.pemFile;
+            var privateKeyFile = pemResult.privateKeyFile;
             store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename, storePassword);
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
             if (virtualServerNames.Count > 0)
-                store.UpdateBindings(cert.Alias, virtualServerNames, sniCerts);
+                hasBindingError = store.UpdateBindings(cert.Alias, virtualServerNames, sniCerts);
 
             if (linkToIssuer)
             {
-                store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, cert.Alias);
+                hasLinkError = store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, cert.Alias);
             }
 
             _logger.MethodExit(LogLevel.Debug);
+
+            return (hasBindingError, hasLinkError);
         }
 
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)

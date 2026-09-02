@@ -12,12 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using com.citrix.netscaler.nitro.exception;
 using com.citrix.netscaler.nitro.resource.Base;
 using com.citrix.netscaler.nitro.resource.config.ssl;
@@ -25,6 +19,7 @@ using com.citrix.netscaler.nitro.resource.config.system;
 using com.citrix.netscaler.nitro.service;
 using com.citrix.netscaler.nitro.util;
 using Keyfactor.Logging;
+using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
 using Keyfactor.PKI.CryptographicObjects.Formatters;
 using Keyfactor.PKI.PEM;
@@ -34,7 +29,13 @@ using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
-using Keyfactor.Orchestrators.Common.Enums;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using static com.citrix.netscaler.nitro.service.options;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -634,21 +635,23 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return alias;
         }
 
-        public void UpdateBindings(string keyPairName, List<string> virtualServerNames, List<bool> sniCerts)
+        public bool UpdateBindings(string keyPairName, List<string> virtualServerNames, List<bool> sniCerts)
         {
             Logger.MethodEntry(LogLevel.Debug);
+            bool hasErrors = false;
 
-            try
+            if (virtualServerNames.Count != sniCerts.Count)
             {
-                if (virtualServerNames.Count != sniCerts.Count)
-                {
-                    Logger.LogError($"Error attempting to perform binding.  Mismatched number of virtual server names ({virtualServerNames.Count.ToString()} and SNI values {sniCerts.Count.ToString()}.  Certificate added, but binding not performed.");
-                    return;
-                }
+                Logger.LogError($"Error attempting to perform binding.  Mismatched number of virtual server names ({virtualServerNames.Count.ToString()} and SNI values {sniCerts.Count.ToString()}.  Certificate added, but binding not performed.");
+                Logger.MethodExit(LogLevel.Debug);
+                return true;
+            }
 
-                var i = 0;
+            var i = 0;
 
-                foreach (string vsName in virtualServerNames)
+            foreach (string vsName in virtualServerNames)
+            {
+                try
                 {
                     bool sniBool = Convert.ToBoolean(sniCerts[virtualServerNames.IndexOf(vsName)]);
                     Logger.LogTrace($"Updating binding for {vsName}");
@@ -670,79 +673,52 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         Logger.LogTrace($"Removing binding results: ErrorCode: {response.errorcode}, Message: {response.message}");
                     }
                     sslvserver_sslcertkey_binding.add(_nss, ssb);
-
-                    i++;
                 }
+                catch (Exception e)
+                {
+                    Logger.LogError($"Error occurred updating binding {vsName} - {LogHandler.FlattenException(e)}.  Certificate added but binding not performed.");
+                    hasErrors = true;
+                }
+
+                i++;
             }
-            catch (Exception e)
-            {
-                Logger.LogError(
-                    $"Error Occurred in UpdateBindings: {LogHandler.FlattenException(e)}");
-                throw;
-            }
-            finally
-            {
-                Logger.MethodExit(LogLevel.Debug);
-            }
+
+            return hasErrors;
         }
 
-        public void LinkToIssuer(string cert, string privateKeyPassword, string keyPairName)
+        public bool LinkToIssuer(string cert, string privateKeyPassword, string keyPairName)
         {
             Logger.MethodEntry(LogLevel.Debug);
+
+            bool hasError = false;
+            sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
+            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
 
             X509Certificate2Collection x509CertCollection = new X509Certificate2Collection();
             x509CertCollection.Import(Convert.FromBase64String(cert), privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
 
             X509Certificate2 issuingCert = x509CertCollection.First(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
 
-            LinkToIssuer(keyPairName, candidate => candidate.Thumbprint == issuingCert.Thumbprint);
-
-            Logger.MethodExit(LogLevel.Debug);
-        }
-
-        public void LinkToIssuer(X509Certificate2 leafCertWithoutChain, string keyPairName)
-        {
-            Logger.MethodEntry(LogLevel.Debug);
-
-            LinkToIssuer(keyPairName, candidate => candidate.Subject == leafCertWithoutChain.Issuer);
-
-            Logger.MethodExit(LogLevel.Debug);
-        }
-
-        private void LinkToIssuer(string keyPairName, Func<X509Certificate2, bool> isIssuer)
-        {
-            Logger.MethodEntry(LogLevel.Debug);
-
-            sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
-            sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
-
             if (chain.chaincomplete == 1)
             {
                 foreach (string chainCertAlias in chain.chainlinked)
                 {
-                    X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
-                    if (isIssuer(x509ChainCert))
-                    {
-                        return;
-                    }
+                    if (GetX509Certificate(GetKeyPairByName(chainCertAlias)).Thumbprint == issuingCert.Thumbprint)
+                        return hasError;
                 }
             }
 
-            if (chain.chainpossiblelinks == null || chain.chainpossiblelinks.Length == 0)
-            {
-                string msg = $"Certificate added, but link not performed.  No Issuing CA Certificate exists for {keyPairName}.";
-                Logger.LogWarning(msg);
-                throw new LinkException(msg);
-            }
-
             string chainCertName = string.Empty;
-            foreach (string chainCertAlias in chain.chainpossiblelinks)
+            if (chain.chainpossiblelinks != null && chain.chainpossiblelinks.Length != 0)
             {
-                X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
-                if (isIssuer(x509ChainCert))
+                foreach (string chainCertAlias in chain.chainpossiblelinks)
                 {
-                    chainCertName = chainCertAlias;
-                    break;
+                    X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
+                    if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                    {
+                        chainCertName = chainCertAlias;
+                        break;
+                    }
                 }
             }
 
@@ -750,12 +726,22 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 string errMsg = "Issuing certificate not found in Citrix.  Link not performed.";
                 Logger.LogWarning(errMsg);
-                throw new LinkException(errMsg);
+                return true;
             }
 
             certKey.linkcertkeyname = chainCertName;
-            sslcertkey.link(_nss, certKey);
 
+            try
+            {
+                sslcertkey.link(_nss, certKey);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error occurred linking certificate {keyPairName} to issuer {chainCertName} - {LogHandler.FlattenException(ex)}.  Certificate added but link not performed.");
+                hasError = true;
+            }
+
+            return hasError;
             Logger.MethodExit(LogLevel.Debug);
         }
 
@@ -1094,10 +1080,5 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 Logger.MethodExit(LogLevel.Debug);
             }
         }
-    }
-
-    public class LinkException : Exception 
-    {
-        public LinkException(string message) : base(message) { }
     }
 }
