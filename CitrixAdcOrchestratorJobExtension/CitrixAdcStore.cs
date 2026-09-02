@@ -821,8 +821,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         x509Cert = GetPEMContent(f);
                         break;
                     case "PFX":
-                        byte[] derBytes = Convert.FromBase64String(f.filecontent);
-                        x509Cert = GetPFXContent(f, password); ;
+                        x509Cert = GetPFXContent(f, password);
                         break;
                     default:
                         string error = $"Certificate {certificate.certkey} has unsupported format {certificate.inform}.  Certificate skipped.";
@@ -870,6 +869,25 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             try
             {
                 x509Cert = ReadX509Certificate(certString);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error reading converting {f.filename} to X509 certificate format: {LogHandler.FlattenException(e)}");
+                return null;
+            }
+
+            return x509Cert;
+        }
+
+        public X509Certificate2 GetPFXContent(systemfile f, string password)
+        {
+            X509Certificate2 x509Cert = null;
+
+            byte[] pfxBytes = Convert.FromBase64String(f.filecontent);
+
+            try
+            {
+                x509Cert = new X509Certificate2(pfxBytes, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
             }
             catch (Exception e)
             {
