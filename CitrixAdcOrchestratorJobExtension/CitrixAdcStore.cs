@@ -844,6 +844,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public X509Certificate2 GetPEMContent(systemfile f)
         {
+            Logger.MethodEntry(LogLevel.Debug);
+
             X509Certificate2 x509Cert = null;
             string certString = null;
 
@@ -856,14 +858,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             if (startIdx == -1 || endIdx == -1)
             {
-                Logger.LogWarning($"Certificate {f.filename} does not contain a valid PEM formatted certificate");
+                Logger.LogError($"Certificate {f.filename} does not contain a valid PEM formatted certificate");
             }
 
             certString = fileString.Substring(startIdx, endIdx - startIdx + endDelim.Length);
 
             if (certString == null)
             {
-                return null;
+                string error = $"Error reading/converting {f.filename} to X509 certificate format.  Invalid PEM format.";
+                Logger.LogError(error);
+                Logger.MethodExit(LogLevel.Debug);
+                throw new Exception(error);
             }
 
             try
@@ -872,8 +877,12 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error reading converting {f.filename} to X509 certificate format: {LogHandler.FlattenException(e)}");
-                return null;
+                Logger.LogError($"Error reading/converting {f.filename} to X509 certificate format: {LogHandler.FlattenException(e)}");
+                throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
             }
 
             return x509Cert;
@@ -881,18 +890,23 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public X509Certificate2 GetPFXContent(systemfile f, string password)
         {
-            X509Certificate2 x509Cert = null;
+            Logger.MethodEntry(LogLevel.Debug);
 
-            byte[] pfxBytes = Convert.FromBase64String(f.filecontent);
+            X509Certificate2 x509Cert = null;
 
             try
             {
+                byte[] pfxBytes = Convert.FromBase64String(f.filecontent);
                 x509Cert = new X509Certificate2(pfxBytes, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error reading converting {f.filename} to X509 certificate format: {LogHandler.FlattenException(e)}");
-                return null;
+                Logger.LogError($"Error reading converting PFX file {f.filename} to X509 certificate format: {LogHandler.FlattenException(e)}");
+                throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
             }
 
             return x509Cert;

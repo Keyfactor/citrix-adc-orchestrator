@@ -185,7 +185,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 {
                     Result = hasError ? Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Warning : Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Success,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = hasError ? $"Not all certificates were successfully inventoried.  Aliases {string.Join(", ", errorAliases)} could not be read.  Please check the orchestrator log for details."
+                    FailureMessage = hasError ? $"Not all certificates were successfully inventoried.  Alias(es) {string.Join(", ", errorAliases)} could not be read.  Please check the orchestrator log for details." : string.Empty
                 };
             }
             catch (Exception ex)
