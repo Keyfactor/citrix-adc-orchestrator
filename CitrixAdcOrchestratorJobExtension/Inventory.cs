@@ -83,6 +83,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             _logger.LogDebug($"Begin {jobConfiguration.Capability} for job id {jobConfiguration.JobId}...");
             _logger.MethodEntry(LogLevel.Debug);
 
+            bool hasError = false;
+            List<String> errorAliases = new List<string>();
             List<CurrentInventoryItem> inventory = new List<CurrentInventoryItem>();
 
             try
@@ -95,7 +97,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 foreach (sslcertkey certificate in certificates)
                 {
                     _logger.LogDebug($"Retrieving certificate file: {certificate.cert} for alias {certificate.certkey}");
-                    X509Certificate2 x = store.GetX509Certificate(certificate);
+                    X509Certificate2 x = null;
+                    try
+                    {
+                        x = store.GetX509Certificate(certificate, jobConfiguration.CertificateStoreDetails.StorePassword);
+                    }
+                    catch (Exception ex)
+                    {
+                        hasError = true;
+                        errorAliases.Add(certificate.certkey);
+                        _logger.LogError($"Error retrieving certificate file: {certificate.cert} for alias {certificate.certkey}. Error: {LogHandler.FlattenException(ex)}");
+                    }
 
                     if (x == null) continue;
 
@@ -171,9 +183,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 //Status: 2=Success, 3=Warning, 4=Error
                 return new JobResult()
                 {
-                    Result = Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Success,
+                    Result = hasError ? Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Warning : Orchestrators.Common.Enums.OrchestratorJobStatusJobResult.Success,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = ""
+                    FailureMessage = hasError ? $"Not all certificates were successfully inventoried.  Aliases {string.Join(", ", errorAliases)} could not be read.  Please check the orchestrator log for details."
                 };
             }
             catch (Exception ex)

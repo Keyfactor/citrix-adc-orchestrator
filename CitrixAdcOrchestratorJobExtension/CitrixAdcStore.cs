@@ -29,6 +29,8 @@ using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.Tls;
+using Org.BouncyCastle.X509;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -686,7 +688,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return hasErrors;
         }
 
-        public bool LinkToIssuer(string cert, string privateKeyPassword, string keyPairName)
+        public bool LinkToIssuer(string cert, string privateKeyPassword, string keyPairName, string storePassword)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
@@ -703,7 +705,16 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 foreach (string chainCertAlias in chain.chainlinked)
                 {
-                    if (GetX509Certificate(GetKeyPairByName(chainCertAlias)).Thumbprint == issuingCert.Thumbprint)
+                    X509Certificate2 x509Cert = null;
+                    try
+                    {
+                        x509Cert = GetX509Certificate(GetKeyPairByName(chainCertAlias), storePassword);
+                    }
+                    catch (Exception ex)
+                    {
+                        return true;
+                    }
+                    if (x509Cert != null & x509Cert.Thumbprint == issuingCert.Thumbprint)
                         return hasError;
                 }
             }
@@ -713,8 +724,17 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 foreach (string chainCertAlias in chain.chainpossiblelinks)
                 {
-                    X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
-                    if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                    X509Certificate2 x509ChainCert = null;
+                    try
+                    {
+                        x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias), storePassword);
+                    }
+                    catch (Exception ex)
+                    {
+                        return true;
+                    }
+
+                    if (x509ChainCert != null & x509ChainCert.Thumbprint == issuingCert.Thumbprint)
                     {
                         chainCertName = chainCertAlias;
                         break;
@@ -785,55 +805,78 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public X509Certificate2 GetX509Certificate(sslcertkey certificate)
+        public X509Certificate2 GetX509Certificate(sslcertkey certificate, string password)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
-            string certString = null;
             X509Certificate2 x509Cert = null;
 
             try
             {
                 Logger.LogTrace($"Trying GetSystemFile(fileLocation): {certificate.cert}");
                 systemfile f = GetSystemFile(certificate.cert);
+                switch (certificate.inform)
+                {
+                    case "PEM":
+                        x509Cert = GetPEMContent(f);
+                        break;
+                    case "PFX":
+                        byte[] derBytes = Convert.FromBase64String(f.filecontent);
+                        x509Cert = GetPFXContent(f, password); ;
+                        break;
+                    default:
+                        string error = $"Certificate {certificate.certkey} has unsupported format {certificate.inform}.  Certificate skipped.";
+                        Logger.LogWarning(error);
+                        throw new Exception (error);
+                }
                 Logger.LogTrace($"Finished GetSystemFile(fileLocation): {certificate.cert}");
 
-                var b = Convert.FromBase64String(f.filecontent);
-                var fileString = Encoding.Default.GetString(b);
-
-                string endDelim = "-----END CERTIFICATE-----";
-                int startIdx = fileString.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal);
-                int endIdx = fileString.IndexOf(endDelim, StringComparison.Ordinal);
-
-                if (startIdx == -1 || endIdx == -1)
-                {
-                    Logger.LogWarning($"Certificate {certificate.certkey} does not contain a valid PEM formatted certificate");
-                }
-
-                certString = fileString.Substring(startIdx, endIdx - startIdx + endDelim.Length);
-
-                if (certString == null)
-                {
-                    return null;
-                }
-
-                try
-                {
-                    x509Cert = ReadX509Certificate(certString);
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError($"Error reading converting {certificate.certkey} to X509 certificate format: {LogHandler.FlattenException(e)}");
-                    return null;
-                }
             }
             catch (Exception e)
             {
                 // Not a certificate file
-                Logger.LogError($"Error reading/processing certificate {certificate.certkey}: {LogHandler.FlattenException(e)}");
+                Logger.LogError($"Error reading/processing certificate {certificate.certkey}: {LogHandler.FlattenException(e)}.  Certificate skipped.");
+                throw;
             }
 
             Logger.MethodExit(LogLevel.Debug);
+            return x509Cert;
+        }
+
+        public X509Certificate2 GetPEMContent(systemfile f)
+        {
+            X509Certificate2 x509Cert = null;
+            string certString = null;
+
+            var b = Convert.FromBase64String(f.filecontent);
+            var fileString = Encoding.Default.GetString(b);
+
+            string endDelim = "-----END CERTIFICATE-----";
+            int startIdx = fileString.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal);
+            int endIdx = fileString.IndexOf(endDelim, StringComparison.Ordinal);
+
+            if (startIdx == -1 || endIdx == -1)
+            {
+                Logger.LogWarning($"Certificate {f.filename} does not contain a valid PEM formatted certificate");
+            }
+
+            certString = fileString.Substring(startIdx, endIdx - startIdx + endDelim.Length);
+
+            if (certString == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                x509Cert = ReadX509Certificate(certString);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error reading converting {f.filename} to X509 certificate format: {LogHandler.FlattenException(e)}");
+                return null;
+            }
+
             return x509Cert;
         }
 

@@ -217,7 +217,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             if (linkToIssuer)
             {
-                hasLinkError = store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, cert.Alias);
+                hasLinkError = store.LinkToIssuer(cert.Contents, cert.PrivateKeyPassword, cert.Alias, storePassword);
             }
 
             _logger.MethodExit(LogLevel.Debug);
