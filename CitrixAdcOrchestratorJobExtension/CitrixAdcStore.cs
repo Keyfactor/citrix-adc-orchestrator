@@ -19,7 +19,6 @@ using com.citrix.netscaler.nitro.resource.config.system;
 using com.citrix.netscaler.nitro.service;
 using com.citrix.netscaler.nitro.util;
 using Keyfactor.Logging;
-using Keyfactor.Orchestrators.Common.Enums;
 using Keyfactor.Orchestrators.Extensions;
 using Keyfactor.PKI.CryptographicObjects.Formatters;
 using Keyfactor.PKI.PEM;
@@ -27,17 +26,13 @@ using Keyfactor.PKI.PrivateKeys;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Tls;
-using Org.BouncyCastle.X509;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using static com.citrix.netscaler.nitro.service.options;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -1088,45 +1083,30 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public base_response DeleteFile(string alias)
         {
+            Logger.MethodEntry(LogLevel.Debug);
+
             try
             {
-                Logger.LogDebug("Entering DeleteFile(string contents, string alias) Method...");
-                Logger.LogTrace($"alias: {alias} storePath: {StorePath}");
                 var f = new systemfile
                 {
                     filename = alias,
                     filelocation = StorePath
                 };
-                Logger.LogDebug("Exiting DeleteFile() Method...");
-                return DeleteFile(f);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(
-                    $"Error Occurred in DeleteFile(string contents, string alias): {LogHandler.FlattenException(e)}");
-                throw;
-            }
-        }
-
-        private base_response DeleteFile(systemfile f)
-        {
-            try
-            {
-                Logger.LogDebug("Entering and Exiting DeleteFile() Method...");
-                Logger.LogTrace($"Deleting certificate at {f.filelocation}/{f.filename}");
                 return systemfile.delete(_nss, f);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error Occurred in DeleteFile(): {LogHandler.FlattenException(e)}");
+                Logger.LogError($"Error Occurred in DeleteFile(string contents, string alias): {LogHandler.FlattenException(e)}");
                 throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
             }
         }
 
         public bool AliasExists(string alias)
         {
-            Logger.MethodEntry(LogLevel.Debug);
-
             var filters = new filtervalue[1];
             filters[0] = new filtervalue("certKey", alias);
             Logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {alias}");

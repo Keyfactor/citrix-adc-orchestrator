@@ -22,8 +22,6 @@ using Keyfactor.Logging;
 using Keyfactor.Orchestrators.Extensions.Interfaces;
 
 using com.citrix.netscaler.nitro.resource.config.ssl;
-using Newtonsoft.Json;
-using Keyfactor.Orchestrators.Common.Enums;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {

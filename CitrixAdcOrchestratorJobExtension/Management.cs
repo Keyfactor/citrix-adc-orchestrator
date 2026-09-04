@@ -97,7 +97,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         var virtualServerName = (string)jobConfiguration.JobProperties["virtualServerName"];
                         var sniCert = (string)jobConfiguration.JobProperties["sniCert"];
 
-                        _logger.LogTrace($"alias: {jobConfiguration.JobCertificate.Alias} virtualServerName {virtualServerName}");
+                        _logger.LogTrace($"alias: {jobConfiguration.JobCertificate.Alias}");
 
                         if (!aliasExists)
                         {
