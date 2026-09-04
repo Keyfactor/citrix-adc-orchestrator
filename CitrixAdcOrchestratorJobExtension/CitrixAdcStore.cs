@@ -699,7 +699,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             X509Certificate2Collection x509CertCollection = new X509Certificate2Collection();
             x509CertCollection.Import(Convert.FromBase64String(cert), privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
 
-            X509Certificate2 issuingCert = x509CertCollection.First(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
+            X509Certificate2 issuingCert = x509CertCollection.FirstOrDefault(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
+            if (issuingCert == null)
+            {
+                string errMsg = "Issuing ceritificate not passed to management job, so no link can be performed.";
+                Logger.LogWarning(errMsg);
+                return true;
+            }
 
             if (chain.chaincomplete == 1)
             {
