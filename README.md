@@ -394,6 +394,8 @@ Please refer to the **Universal Orchestrator (remote)** usage section ([PAM prov
 
 ## Notes and Limitations
 
+* As of release 4.0.0, PFX files can now be read during inventory.  Please note, however, that each PFX file MUST be encrypted with the password set as the Store Password for the Keyfactor certificate store being managed.  Any PFX files encrypted with passwords not matching this value will be skipped, a warning message wil be written to the orchestrator log, and the Inventory job will return successfully but with a Warning status and message.
+
 * As of release 2.2.0, ONLY certificate objects (installed certificates) will be managed by the Citrix ADC Orchestrator Extension.  Prior versions also managed certificate/key file combinations uploaded to the Citrix ADC device but not yet installed.  This functionality has been removed due to issues attempting to match certificate and key files due to inconsistent file naming.
 
 * Removing Certs from Store: Certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server first and then remove via the Command and this orchestrator extension.
