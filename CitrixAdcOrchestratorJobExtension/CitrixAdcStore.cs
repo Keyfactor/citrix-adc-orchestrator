@@ -12,12 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using com.citrix.netscaler.nitro.exception;
 using com.citrix.netscaler.nitro.resource.Base;
 using com.citrix.netscaler.nitro.resource.config.ssl;
@@ -32,9 +26,13 @@ using Keyfactor.PKI.PrivateKeys;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
-using Keyfactor.Orchestrators.Common.Enums;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 {
@@ -42,6 +40,9 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
     internal class CitrixAdcStore
     {
         private const string DefaultTimeout = "3600";
+        private const string DefaultKeySize = "2048";
+        private const string DefaultRsaExponent = "F4";
+        private const string ALIAS_CSR_SUFFIX = ".csr";
         public static readonly string StoreType = "CitrixAdc";
 
         private readonly string _clientMachine;
@@ -118,6 +119,41 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 Logger.LogError(
                     $"Error Occured in CitrixAdcStore(ManagementJobConfiguration config) : this((JobConfiguration) config): {LogHandler.FlattenException(e)}");
+                throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        public CitrixAdcStore(ReenrollmentJobConfiguration config, string serverUserName, string serverPassword)
+        {
+            try
+            {
+                Logger = LogHandler.GetClassLogger<CitrixAdcStore>();
+                Logger.MethodEntry(LogLevel.Debug);
+
+                SetTimeout(JsonConvert.DeserializeObject(config.CertificateStoreDetails.Properties.ToString()));
+
+                _clientMachine = config.CertificateStoreDetails.ClientMachine;
+                StorePath = StripTrailingSlash(config.CertificateStoreDetails.StorePath);
+                _useSsl = config.UseSSL;
+                _username = serverUserName;
+                _password = serverPassword;
+                var o = new systemfile_args();
+
+                Logger.LogTrace($"UrlPath: {StorePath}");
+                o.filelocation = StorePath;
+
+                nitroServiceOptions = o;
+                Logger.LogDebug(
+                    "Exit CitrixAdcStore(ReenrollmentJobConfiguration config) : this((JobConfiguration) config) Constructor...");
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(
+                    $"Error Occured in CitrixAdcStore(ReenrollmentJobConfiguration config) : this((JobConfiguration) config): {LogHandler.FlattenException(e)}");
                 throw;
             }
             finally
@@ -211,6 +247,217 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
+        public (string csr, string keyFileName) GenerateCSR(string alias, string subjectText, string sans, string storePassword, string keyType, int? keySize)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                string keyFileName;
+                if (string.IsNullOrEmpty(keyType) || keyType.Equals("RSA", StringComparison.OrdinalIgnoreCase))
+                {
+                    keyFileName = CreateRsaKey(alias, keySize, storePassword);
+                }
+                else if (keyType.Equals("ECC", StringComparison.OrdinalIgnoreCase) || keyType.Equals("EC", StringComparison.OrdinalIgnoreCase) || keyType.Equals("ECDSA", StringComparison.OrdinalIgnoreCase))
+                {
+                    keyFileName = CreateEcdsaKey(alias, keySize, storePassword);
+                }
+                else
+                {
+                    throw new Exception($"Key type {keyType} is not supported for on-device key generation (ODKG) reenrollment on the Citrix ADC appliance.  Only RSA and ECC are currently supported.");
+                }
+
+                string[] subjectParams = (subjectText ?? string.Empty).Split(',');
+                Dictionary<string, string> subjectValues = new Dictionary<string, string>();
+                foreach (string subjectParam in subjectParams)
+                {
+                    if (string.IsNullOrWhiteSpace(subjectParam)) continue;
+                    string[] subjectPair = subjectParam.Split(new[] { '=' }, 2);
+                    if (subjectPair.Length == 2)
+                        subjectValues[subjectPair[0].Trim().ToUpperInvariant()] = subjectPair[1].Trim();
+                }
+
+                string csrFileName = Path.GetFileNameWithoutExtension(keyFileName) + ALIAS_CSR_SUFFIX;
+
+                sslcertreq csrRequest = new sslcertreq()
+                {
+                    reqfile = csrFileName,
+                    keyfile = keyFileName,
+                    keyform = "PEM",
+                    commonname = subjectValues.ContainsKey("CN") ? subjectValues["CN"] : null,
+                    organizationname = subjectValues.ContainsKey("O") ? subjectValues["O"] : null,
+                    organizationunitname = subjectValues.ContainsKey("OU") ? subjectValues["OU"] : null,
+                    countryname = subjectValues.ContainsKey("C") ? subjectValues["C"] : null,
+                    statename = subjectValues.ContainsKey("ST") ? subjectValues["ST"] : null,
+                    localityname = subjectValues.ContainsKey("L") ? subjectValues["L"] : null,
+                    emailaddress = subjectValues.ContainsKey("E") ? subjectValues["E"] : null,
+                    subjectaltname = string.IsNullOrEmpty(sans) ? null : sans,
+                    pempassphrase = string.IsNullOrEmpty(storePassword) ? null : storePassword
+                };
+
+                base_response response = sslcertreq.create(_nss, csrRequest);
+                if (response != null && response.errorcode != 0)
+                {
+                    throw new Exception($"Error generating CSR for alias {alias}: {response.message}");
+                }
+
+                systemfile csrFile = GetSystemFile(csrFileName);
+                byte[] csrBytes = Convert.FromBase64String(csrFile.filecontent);
+                string csrContents = Encoding.Default.GetString(csrBytes);
+
+                return (csrContents, keyFileName);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error Occurred in GenerateCSR(): {LogHandler.FlattenException(e)}");
+                throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        private string CreateRsaKey(string alias, int? keySize, string keyPassword)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                return CreateRsaKey(alias, keySize, keyPassword, 0);
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        private string CreateRsaKey(string alias, int? keySize, string keyPassword, int fileNameSuffix)
+        {
+            if (fileNameSuffix > 50)
+            {
+                string errMessage = $"Too many attempts (50) to generate a new RSA key for {alias}";
+                Logger.LogError(errMessage);
+                throw new Exception(errMessage);
+            }
+
+            string fileNameSuffixString = fileNameSuffix == 0 ? string.Empty : fileNameSuffix.ToString();
+            string keyFileName = alias + fileNameSuffixString + ".key";
+
+            sslrsakey rsaKeyRequest = new sslrsakey()
+            {
+                keyfile = keyFileName,
+                bits = keySize.HasValue ? Convert.ToUInt32(keySize.Value) : Convert.ToUInt32(DefaultKeySize),
+                exponent = DefaultRsaExponent,
+                keyform = "PEM"
+            };
+
+            if (!string.IsNullOrEmpty(keyPassword))
+            {
+                rsaKeyRequest.des3 = true;
+                rsaKeyRequest.password = keyPassword;
+            }
+
+            try
+            {
+                base_response response = sslrsakey.create(_nss, rsaKeyRequest);
+                if (response != null && response.errorcode != 0)
+                {
+                    throw new Exception($"Error generating new RSA key for alias {alias}: {response.message}");
+                }
+            }
+            catch (nitro_exception ne)
+            {
+                if (ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists"))
+                {
+                    Logger.LogTrace($"Key file {keyFileName} already exists.  Trying again with new name.");
+                    return CreateRsaKey(alias, keySize, keyPassword, fileNameSuffix + 1);
+                }
+
+                string error = $"Error generating new RSA key for alias {alias}: {ne.Message}";
+                Logger.LogError(error);
+                throw new Exception(error, ne);
+            }
+
+            return keyFileName;
+        }
+
+        private string CreateEcdsaKey(string alias, int? keySize, string keyPassword)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                string curve;
+                switch (keySize)
+                {
+                    case 256:
+                        curve = "P_256";
+                        break;
+                    case 384:
+                        curve = "P_384";
+                        break;
+                    default:
+                        throw new Exception($"ECC key size {keySize} is not supported for on-device key generation (ODKG) reenrollment on the Citrix ADC appliance.  Only 256 and 384-bit curves (P_256, P_384) are currently supported.");
+                }
+
+                return CreateEcdsaKey(alias, curve, keyPassword, 0);
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        private string CreateEcdsaKey(string alias, string curve, string keyPassword, int fileNameSuffix)
+        {
+            if (fileNameSuffix > 50)
+            {
+                string errMessage = $"Too many attempts (50) to generate a new ECDSA key for {alias}";
+                Logger.LogError(errMessage);
+                throw new Exception(errMessage);
+            }
+
+            string fileNameSuffixString = fileNameSuffix == 0 ? string.Empty : fileNameSuffix.ToString();
+            string keyFileName = alias + fileNameSuffixString + ".key";
+
+            sslecdsakey ecdsaKeyRequest = new sslecdsakey()
+            {
+                keyfile = keyFileName,
+                curve = curve,
+                keyform = "PEM"
+            };
+
+            if (!string.IsNullOrEmpty(keyPassword))
+            {
+                ecdsaKeyRequest.des3 = true;
+                ecdsaKeyRequest.password = keyPassword;
+            }
+
+            try
+            {
+                base_response response = sslecdsakey.create(_nss, ecdsaKeyRequest);
+                if (response != null && response.errorcode != 0)
+                {
+                    throw new Exception($"Error generating new ECDSA key for alias {alias}: {response.message}");
+                }
+            }
+            catch (nitro_exception ne)
+            {
+                if (ne.HResult.Equals(0x80131500) || ne.Message.Contains("File already exists"))
+                {
+                    Logger.LogTrace($"Key file {keyFileName} already exists.  Trying again with new name.");
+                    return CreateEcdsaKey(alias, curve, keyPassword, fileNameSuffix + 1);
+                }
+
+                string error = $"Error generating new ECDSA key for alias {alias}: {ne.Message}";
+                Logger.LogError(error);
+                throw new Exception(error, ne);
+            }
+
+            return keyFileName;
+        }
+
         public sslcertkey[] GetCertificates()
         {
             Logger.MethodEntry(LogLevel.Debug);
@@ -247,6 +494,54 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 Logger.MethodExit(LogLevel.Debug);
             }
+        }
+
+        public bool DeleteOldCertificateFiles(sslcertkey oldKeyPair)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            bool hasError = false;
+
+            try
+            {
+                if (oldKeyPair == null)
+                    return false;
+
+                if (!string.IsNullOrEmpty(oldKeyPair.cert))
+                {
+                    try
+                    {
+                        Logger.LogTrace($"Deleting old certificate file {oldKeyPair.cert} for alias {oldKeyPair.certkey}");
+                        DeleteFile(Path.GetFileName(oldKeyPair.cert));
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogWarning($"Certificate was replaced successfully, but the previous certificate file {oldKeyPair.cert} for alias {oldKeyPair.certkey} could not be deleted: {LogHandler.FlattenException(e)}");
+                        hasError = true;
+                    }
+                }
+
+                // PFX-formatted certificates bundle the key inside the cert file referenced above; a separate key file only exists for PEM-formatted certificates.
+                if (!string.IsNullOrEmpty(oldKeyPair.key))
+                {
+                    try
+                    {
+                        Logger.LogTrace($"Deleting old key file {oldKeyPair.key} for alias {oldKeyPair.certkey}");
+                        DeleteFile(Path.GetFileName(oldKeyPair.key));
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogWarning($"Certificate was replaced successfully, but the previous key file {oldKeyPair.key} for alias {oldKeyPair.certkey} could not be deleted: {LogHandler.FlattenException(e)}");
+                        hasError = true;
+                    }
+                }
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+
+            return hasError;
         }
 
         public base_response DeleteKeyPair(sslcertkey f)
@@ -385,21 +680,23 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return alias;
         }
 
-        public void UpdateBindings(string keyPairName, List<string> virtualServerNames, List<bool> sniCerts)
+        public bool UpdateBindings(string keyPairName, List<string> virtualServerNames, List<bool> sniCerts)
         {
             Logger.MethodEntry(LogLevel.Debug);
+            bool hasErrors = false;
 
-            try
+            if (virtualServerNames.Count != sniCerts.Count)
             {
-                if (virtualServerNames.Count != sniCerts.Count)
-                {
-                    Logger.LogError($"Error attempting to perform binding.  Mismatched number of virtual server names ({virtualServerNames.Count.ToString()} and SNI values {sniCerts.Count.ToString()}.  Certificate added, but binding not performed.");
-                    return;
-                }
+                Logger.LogError($"Error attempting to perform binding.  Mismatched number of virtual server names ({virtualServerNames.Count.ToString()} and SNI values {sniCerts.Count.ToString()}.  Certificate added, but binding not performed.");
+                Logger.MethodExit(LogLevel.Debug);
+                return true;
+            }
 
-                var i = 0;
+            var i = 0;
 
-                foreach (string vsName in virtualServerNames)
+            foreach (string vsName in virtualServerNames)
+            {
+                try
                 {
                     bool sniBool = Convert.ToBoolean(sniCerts[virtualServerNames.IndexOf(vsName)]);
                     Logger.LogTrace($"Updating binding for {vsName}");
@@ -421,61 +718,76 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         Logger.LogTrace($"Removing binding results: ErrorCode: {response.errorcode}, Message: {response.message}");
                     }
                     sslvserver_sslcertkey_binding.add(_nss, ssb);
-
-                    i++;
                 }
+                catch (Exception e)
+                {
+                    Logger.LogError($"Error occurred updating binding {vsName} - {LogHandler.FlattenException(e)}.  Certificate added but binding not performed.");
+                    hasErrors = true;
+                }
+
+                i++;
             }
-            catch (Exception e)
-            {
-                Logger.LogError(
-                    $"Error Occurred in UpdateBindings: {LogHandler.FlattenException(e)}");
-                throw;
-            }
-            finally
-            {
-                Logger.MethodExit(LogLevel.Debug);
-            }
+
+            return hasErrors;
         }
 
-        public void LinkToIssuer(string cert, string privateKeyPassword, string keyPairName)
+        public bool LinkToIssuer(string cert, string privateKeyPassword, string keyPairName, string storePassword)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
+            bool hasError = false;
             sslcertificatechain chain = sslcertificatechain.get(_nss, keyPairName);
             sslcertkey certKey = sslcertkey.get(_nss, keyPairName);
 
             X509Certificate2Collection x509CertCollection = new X509Certificate2Collection();
             x509CertCollection.Import(Convert.FromBase64String(cert), privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
 
-            X509Certificate2 issuingCert = x509CertCollection.First(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
+            X509Certificate2 issuingCert = x509CertCollection.FirstOrDefault(r => r.Subject == (x509CertCollection.First(p => p.HasPrivateKey).Issuer));
+            if (issuingCert == null)
+            {
+                string errMsg = "Issuing ceritificate not passed to management job, so no link can be performed.";
+                Logger.LogWarning(errMsg);
+                return true;
+            }
 
             if (chain.chaincomplete == 1)
             {
                 foreach (string chainCertAlias in chain.chainlinked)
                 {
-                    X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
-                    if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                    X509Certificate2 x509Cert = null;
+                    try
                     {
-                        return;
+                        x509Cert = GetX509Certificate(GetKeyPairByName(chainCertAlias), storePassword);
                     }
+                    catch (Exception ex)
+                    {
+                        return true;
+                    }
+                    if (x509Cert != null & x509Cert.Thumbprint == issuingCert.Thumbprint)
+                        return hasError;
                 }
             }
 
-            if (chain.chainpossiblelinks == null || chain.chainpossiblelinks.Length == 0)
-            {
-                string msg = $"Certificate added, but link not performed.  No Issuing CA Certificate exists for {keyPairName}.";
-                Logger.LogWarning(msg);
-                throw new LinkException(msg);
-            }
-
             string chainCertName = string.Empty;
-            foreach (string chainCertAlias in chain.chainpossiblelinks)
+            if (chain.chainpossiblelinks != null && chain.chainpossiblelinks.Length != 0)
             {
-                X509Certificate2 x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias));
-                if (x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                foreach (string chainCertAlias in chain.chainpossiblelinks)
                 {
-                    chainCertName = chainCertAlias;
-                    break;
+                    X509Certificate2 x509ChainCert = null;
+                    try
+                    {
+                        x509ChainCert = GetX509Certificate(GetKeyPairByName(chainCertAlias), storePassword);
+                    }
+                    catch (Exception ex)
+                    {
+                        return true;
+                    }
+
+                    if (x509ChainCert != null & x509ChainCert.Thumbprint == issuingCert.Thumbprint)
+                    {
+                        chainCertName = chainCertAlias;
+                        break;
+                    }
                 }
             }
 
@@ -483,12 +795,22 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 string errMsg = "Issuing certificate not found in Citrix.  Link not performed.";
                 Logger.LogWarning(errMsg);
-                throw new LinkException(errMsg);
+                return true;
             }
 
             certKey.linkcertkeyname = chainCertName;
-            sslcertkey.link(_nss, certKey);
 
+            try
+            {
+                sslcertkey.link(_nss, certKey);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error occurred linking certificate {keyPairName} to issuer {chainCertName} - {LogHandler.FlattenException(ex)}.  Certificate added but link not performed.");
+                hasError = true;
+            }
+
+            return hasError;
             Logger.MethodExit(LogLevel.Debug);
         }
 
@@ -532,55 +854,110 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
-        public X509Certificate2 GetX509Certificate(sslcertkey certificate)
+        public X509Certificate2 GetX509Certificate(sslcertkey certificate, string password)
         {
             Logger.MethodEntry(LogLevel.Debug);
 
-            string certString = null;
             X509Certificate2 x509Cert = null;
 
             try
             {
                 Logger.LogTrace($"Trying GetSystemFile(fileLocation): {certificate.cert}");
                 systemfile f = GetSystemFile(certificate.cert);
+                switch (certificate.inform)
+                {
+                    case "PEM":
+                        x509Cert = GetPEMContent(f);
+                        break;
+                    case "PFX":
+                        x509Cert = GetPFXContent(f, password);
+                        break;
+                    default:
+                        string error = $"Certificate {certificate.certkey} has unsupported format {certificate.inform}.  Certificate skipped.";
+                        Logger.LogWarning(error);
+                        throw new Exception (error);
+                }
                 Logger.LogTrace($"Finished GetSystemFile(fileLocation): {certificate.cert}");
 
-                var b = Convert.FromBase64String(f.filecontent);
-                var fileString = Encoding.Default.GetString(b);
-
-                string endDelim = "-----END CERTIFICATE-----";
-                int startIdx = fileString.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal);
-                int endIdx = fileString.IndexOf(endDelim, StringComparison.Ordinal);
-
-                if (startIdx == -1 || endIdx == -1)
-                {
-                    Logger.LogWarning($"Certificate {certificate.certkey} does not contain a valid PEM formatted certificate");
-                }
-
-                certString = fileString.Substring(startIdx, endIdx - startIdx + endDelim.Length);
-
-                if (certString == null)
-                {
-                    return null;
-                }
-
-                try
-                {
-                    x509Cert = ReadX509Certificate(certString);
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError($"Error reading converting {certificate.certkey} to X509 certificate format: {LogHandler.FlattenException(e)}");
-                    return null;
-                }
             }
             catch (Exception e)
             {
                 // Not a certificate file
-                Logger.LogError($"Error reading/processing certificate {certificate.certkey}: {LogHandler.FlattenException(e)}");
+                Logger.LogError($"Error reading/processing certificate {certificate.certkey}: {LogHandler.FlattenException(e)}.  Certificate skipped.");
+                throw;
             }
 
             Logger.MethodExit(LogLevel.Debug);
+            return x509Cert;
+        }
+
+        public X509Certificate2 GetPEMContent(systemfile f)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            X509Certificate2 x509Cert = null;
+            string certString = null;
+
+            var b = Convert.FromBase64String(f.filecontent);
+            var fileString = Encoding.Default.GetString(b);
+
+            string endDelim = "-----END CERTIFICATE-----";
+            int startIdx = fileString.IndexOf("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal);
+            int endIdx = fileString.IndexOf(endDelim, StringComparison.Ordinal);
+
+            if (startIdx == -1 || endIdx == -1)
+            {
+                Logger.LogError($"Certificate {f.filename} does not contain a valid PEM formatted certificate");
+            }
+
+            certString = fileString.Substring(startIdx, endIdx - startIdx + endDelim.Length);
+
+            if (certString == null)
+            {
+                string error = $"Error reading/converting {f.filename} to X509 certificate format.  Invalid PEM format.";
+                Logger.LogError(error);
+                Logger.MethodExit(LogLevel.Debug);
+                throw new Exception(error);
+            }
+
+            try
+            {
+                x509Cert = ReadX509Certificate(certString);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error reading/converting {f.filename} to X509 certificate format: {LogHandler.FlattenException(e)}");
+                throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+
+            return x509Cert;
+        }
+
+        public X509Certificate2 GetPFXContent(systemfile f, string password)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            X509Certificate2 x509Cert = null;
+
+            try
+            {
+                byte[] pfxBytes = Convert.FromBase64String(f.filecontent);
+                x509Cert = new X509Certificate2(pfxBytes, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Error reading converting PFX file {f.filename} to X509 certificate format: {LogHandler.FlattenException(e)}");
+                throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+
             return x509Cert;
         }
 
@@ -630,6 +1007,20 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 Logger.LogError($"Error in UploadCertificate(): {LogHandler.FlattenException(e)}");
                 throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        public systemfile UploadCertificateFile(string alias, string pemCertificate)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                return UploadFile(alias, pemCertificate, true, 0);
             }
             finally
             {
@@ -692,45 +1083,30 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
         public base_response DeleteFile(string alias)
         {
+            Logger.MethodEntry(LogLevel.Debug);
+
             try
             {
-                Logger.LogDebug("Entering DeleteFile(string contents, string alias) Method...");
-                Logger.LogTrace($"alias: {alias} storePath: {StorePath}");
                 var f = new systemfile
                 {
                     filename = alias,
                     filelocation = StorePath
                 };
-                Logger.LogDebug("Exiting DeleteFile() Method...");
-                return DeleteFile(f);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(
-                    $"Error Occurred in DeleteFile(string contents, string alias): {LogHandler.FlattenException(e)}");
-                throw;
-            }
-        }
-
-        private base_response DeleteFile(systemfile f)
-        {
-            try
-            {
-                Logger.LogDebug("Entering and Exiting DeleteFile() Method...");
-                Logger.LogTrace($"Deleting certificate at {f.filelocation}/{f.filename}");
                 return systemfile.delete(_nss, f);
             }
             catch (Exception e)
             {
-                Logger.LogError($"Error Occurred in DeleteFile(): {LogHandler.FlattenException(e)}");
+                Logger.LogError($"Error Occurred in DeleteFile(string contents, string alias): {LogHandler.FlattenException(e)}");
                 throw;
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
             }
         }
 
         public bool AliasExists(string alias)
         {
-            Logger.MethodEntry(LogLevel.Debug);
-
             var filters = new filtervalue[1];
             filters[0] = new filtervalue("certKey", alias);
             Logger.LogTrace($"Checking to see if existing certificate-key pair exists with name {alias}");
@@ -813,10 +1189,5 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 Logger.MethodExit(LogLevel.Debug);
             }
         }
-    }
-
-    public class LinkException : Exception 
-    {
-        public LinkException(string message) : base(message) { }
     }
 }
