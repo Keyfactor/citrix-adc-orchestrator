@@ -501,6 +501,54 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             }
         }
 
+        public bool DeleteOldCertificateFiles(sslcertkey oldKeyPair)
+        {
+            Logger.MethodEntry(LogLevel.Debug);
+
+            bool hasError = false;
+
+            try
+            {
+                if (oldKeyPair == null)
+                    return false;
+
+                if (!string.IsNullOrEmpty(oldKeyPair.cert))
+                {
+                    try
+                    {
+                        Logger.LogTrace($"Deleting old certificate file {oldKeyPair.cert} for alias {oldKeyPair.certkey}");
+                        DeleteFile(Path.GetFileName(oldKeyPair.cert));
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogWarning($"Certificate was replaced successfully, but the previous certificate file {oldKeyPair.cert} for alias {oldKeyPair.certkey} could not be deleted: {LogHandler.FlattenException(e)}");
+                        hasError = true;
+                    }
+                }
+
+                // PFX-formatted certificates bundle the key inside the cert file referenced above; a separate key file only exists for PEM-formatted certificates.
+                if (!string.IsNullOrEmpty(oldKeyPair.key))
+                {
+                    try
+                    {
+                        Logger.LogTrace($"Deleting old key file {oldKeyPair.key} for alias {oldKeyPair.certkey}");
+                        DeleteFile(Path.GetFileName(oldKeyPair.key));
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogWarning($"Certificate was replaced successfully, but the previous key file {oldKeyPair.key} for alias {oldKeyPair.certkey} could not be deleted: {LogHandler.FlattenException(e)}");
+                        hasError = true;
+                    }
+                }
+            }
+            finally
+            {
+                Logger.MethodExit(LogLevel.Debug);
+            }
+
+            return hasError;
+        }
+
         public base_response DeleteKeyPair(sslcertkey f)
         {
             Logger.MethodEntry(LogLevel.Debug);

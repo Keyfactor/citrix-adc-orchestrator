@@ -77,6 +77,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
             var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
+            var removeOldFiles = properties.removeOldFiles == null || string.IsNullOrEmpty(properties.removeOldFiles.Value) ? false : Convert.ToBoolean(properties.removeOldFiles.Value);
 
             ApplicationSettings.Initialize(this.GetType().Assembly.Location);
 
@@ -100,6 +101,8 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         FailureMessage = $"Site {jobConfiguration.CertificateStoreDetails.StorePath} on server {jobConfiguration.CertificateStoreDetails.ClientMachine}: {errorMessage}"
                     };
                 }
+
+                var oldKeyPair = aliasExists ? store.GetKeyPairByName(jobConfiguration.Alias) : null;
 
                 List<string> virtualServerNames = new List<string>();
                 List<bool> sniCerts = new List<bool>();
@@ -190,6 +193,13 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
                 store.UpdateKeyPair(jobConfiguration.Alias, certificateFile.filename, keyFileName, StorePassword);
 
+                bool hasDeleteOldFilesError = false;
+                if (removeOldFiles && oldKeyPair != null)
+                {
+                    _logger.LogDebug("Removing old certificate and key files");
+                    hasDeleteOldFilesError = store.DeleteOldCertificateFiles(oldKeyPair);
+                }
+
                 _logger.LogDebug("Updating cert bindings");
                 bool hasBindingErrors = false;
                 if (virtualServerNames.Count > 0)
@@ -201,11 +211,21 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     store.SaveConfiguration();
                 }
 
+                string errorMessage = string.Empty;
+                if (hasBindingErrors)
+                {
+                    errorMessage += "Certificate was added successfully, but one or more errors occurred binding virtual servers.  Please see the orchestrator log for more details. ";
+                }
+                if (hasDeleteOldFilesError)
+                {
+                    errorMessage += "Certificate was added successfully, but one or more previous certificate/key files could not be deleted.  Please see the orchestrator log for more details. ";
+                }
+
                 JobResult result = new JobResult
                 {
-                    Result = hasBindingErrors == true ? OrchestratorJobStatusJobResult.Warning : OrchestratorJobStatusJobResult.Success,
+                    Result = hasBindingErrors || hasDeleteOldFilesError ? OrchestratorJobStatusJobResult.Warning : OrchestratorJobStatusJobResult.Success,
                     JobHistoryId = jobConfiguration.JobHistoryId,
-                    FailureMessage = hasBindingErrors == true ? $"Certificate was added successfully, but one or more errors occurred binding virtual servers.  Please see the orchestrator log for more details." : string.Empty
+                    FailureMessage = errorMessage
                 };
 
                 return result;

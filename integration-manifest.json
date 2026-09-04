@@ -78,6 +78,15 @@
                       "DefaultValue": "3600",
                       "Required": false,
                       "Description": "Determines timeout in seconds for all Citrix ADC API calls."
+                    },
+                    {
+                      "Name": "removeOldFiles",
+                      "DisplayName": "Remove Old Files",
+                      "Type": "Bool",
+                      "DependsOn": "",
+                      "DefaultValue": "false",
+                      "Required": false,
+                      "Description": "Delete previous certificate and key files after renewal/replace"
                     }
                   ],
                     "EntryParameters": [

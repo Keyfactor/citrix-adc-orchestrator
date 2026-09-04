@@ -60,6 +60,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             bool hasBindingError = false;
             bool hasLinkError = false;
+            bool hasDeleteOldFilesError = false;
 
             ServerPassword = ResolvePamField("ServerPassword", jobConfiguration.ServerPassword);
             ServerUserName = ResolvePamField("ServerUserName", jobConfiguration.ServerUsername);
@@ -67,6 +68,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             dynamic properties = JsonConvert.DeserializeObject(jobConfiguration.CertificateStoreDetails.Properties.ToString());
             var linkToIssuer = properties.linkToIssuer == null || string.IsNullOrEmpty(properties.linkToIssuer.Value) ? false : Convert.ToBoolean(properties.linkToIssuer.Value);
+            var removeOldFiles = properties.removeOldFiles == null || string.IsNullOrEmpty(properties.removeOldFiles.Value) ? false : Convert.ToBoolean(properties.removeOldFiles.Value);
 
             ApplicationSettings.Initialize(this.GetType().Assembly.Location);
 
@@ -130,9 +132,10 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                         }
 
                         var addResult = PerformAdd(store, jobConfiguration.JobCertificate, StorePassword, virtualServerNames,
-                            aliasExists, jobConfiguration.Overwrite, sniCerts, linkToIssuer);
+                            aliasExists, jobConfiguration.Overwrite, sniCerts, linkToIssuer, removeOldFiles);
                         hasBindingError = addResult.Item1;
                         hasLinkError = addResult.Item2;
+                        hasDeleteOldFilesError = addResult.Item3;
 
                         if (ApplicationSettings.AutoSaveConfig)
                         {
@@ -180,10 +183,14 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             {
                 errorMessage += "The certificate was successfully added, but no link was performed to the issuing certificate.  Please check the orchestrator log for more information. ";
             }
+            if (hasDeleteOldFilesError == true)
+            {
+                errorMessage += "The certificate was successfully added, but one or more previous certificate/key files could not be deleted.  Please check the orchestrator log for more information. ";
+            }
 
             JobResult result = new JobResult
             {
-                Result = hasBindingError == true || hasLinkError == true ? OrchestratorJobStatusJobResult.Warning : OrchestratorJobStatusJobResult.Success,
+                Result = hasBindingError == true || hasLinkError == true || hasDeleteOldFilesError == true ? OrchestratorJobStatusJobResult.Warning : OrchestratorJobStatusJobResult.Success,
                 JobHistoryId = jobConfiguration.JobHistoryId,
                 FailureMessage = !string.IsNullOrEmpty(errorMessage) ? errorMessage : string.Empty
             };
@@ -197,18 +204,27 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             return result;
         }
 
-        private (bool, bool) PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string storePassword,
-            List<string> virtualServerNames, bool aliasExists, bool overwrite, List<bool> sniCerts, bool linkToIssuer)
+        private (bool, bool, bool) PerformAdd(CitrixAdcStore store, ManagementJobCertificate cert, string storePassword,
+            List<string> virtualServerNames, bool aliasExists, bool overwrite, List<bool> sniCerts, bool linkToIssuer, bool removeOldFiles)
         {
             _logger.MethodEntry(LogLevel.Debug);
 
             bool hasBindingError = false;
             bool hasLinkError = false;
+            bool hasDeleteOldFilesError = false;
+
+            var oldKeyPair = aliasExists ? store.GetKeyPairByName(cert.Alias) : null;
 
             var pemResult = store.UploadCertificate(cert.Contents, cert.PrivateKeyPassword, storePassword, cert.Alias, overwrite);
             var pemFile = pemResult.pemFile;
             var privateKeyFile = pemResult.privateKeyFile;
             store.UpdateKeyPair(cert.Alias, pemFile.filename, privateKeyFile.filename, storePassword);
+
+            if (removeOldFiles && oldKeyPair != null)
+            {
+                _logger.LogDebug("Removing old certificate and key files");
+                hasDeleteOldFilesError = store.DeleteOldCertificateFiles(oldKeyPair);
+            }
 
             _logger.LogDebug("Updating cert bindings");
             //update cert bindings
@@ -222,7 +238,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
 
             _logger.MethodExit(LogLevel.Debug);
 
-            return (hasBindingError, hasLinkError);
+            return (hasBindingError, hasLinkError, hasDeleteOldFilesError);
         }
 
         private void PerformDelete(CitrixAdcStore store, ManagementJobCertificate cert)
