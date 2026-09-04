@@ -1,3 +1,9 @@
+4.0.0
+* Add support for On Device Key Generation (ODKG).  Supported/tested certificate configurations - RSA 1024, 2048, 3072, and 4096, ECDSA P-256, P-384.
+* Add support for PFX files during inventory (password for each inventoried PFX certificate must match certificate store password)
+* Add new custom field - removeOldFiles.  If set to true, previous certificate and key files will be permanently deleted during a renewal.
+* Logging error status improvements
+
 3.0.1
 * Bug Fix: Error when StorePassword is set to no value
 

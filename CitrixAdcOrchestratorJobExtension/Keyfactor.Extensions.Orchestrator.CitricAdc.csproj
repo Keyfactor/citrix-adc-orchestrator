@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Keyfactor.Common" Version="2.3.6" />
-    <PackageReference Include="Keyfactor.Orchestrators.IOrchestratorJobExtensions" Version="0.7.0" />
+    <PackageReference Include="Keyfactor.Orchestrators.IOrchestratorJobExtensions" Version="1.0.0" />
     <PackageReference Include="Keyfactor.PKI" Version="8.3.1" />
     <PackageReference Include="System.Text.Encodings.Web" Version="6.0.0" />
   
