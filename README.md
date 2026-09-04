@@ -166,6 +166,7 @@ the Keyfactor Command Portal
    | ServerPassword | Server Password | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. | Secret |  | 🔲 Unchecked |
    | linkToIssuer | Link To Issuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate. | Bool | false | 🔲 Unchecked |
    | timeout | Login Timeout in seconds | Determines timeout in seconds for all Citrix ADC API calls. | String | 3600 | 🔲 Unchecked |
+   | removeOldFiles | Remove Old Files | Delete previous certificate and key files after renewal/replace | Bool | false | 🔲 Unchecked |
 
    The Custom Fields tab should look like this:
 
@@ -205,6 +206,14 @@ the Keyfactor Command Portal
 
    ![CitrixAdc Custom Field - timeout](docsource/images/CitrixAdc-custom-field-timeout-dialog.png)
    ![CitrixAdc Custom Field - timeout](docsource/images/CitrixAdc-custom-field-timeout-validation-options-dialog.png)
+
+
+
+   ###### Remove Old Files
+   Delete previous certificate and key files after renewal/replace
+
+   ![CitrixAdc Custom Field - removeOldFiles](docsource/images/CitrixAdc-custom-field-removeOldFiles-dialog.png)
+   ![CitrixAdc Custom Field - removeOldFiles](docsource/images/CitrixAdc-custom-field-removeOldFiles-validation-options-dialog.png)
 
 
 
@@ -318,6 +327,7 @@ An optional config.json configuration file has been provided in the extensions f
    | ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate. |
    | timeout | Determines timeout in seconds for all Citrix ADC API calls. |
+   | removeOldFiles | Delete previous certificate and key files after renewal/replace |
 
 </details>
 
@@ -348,6 +358,7 @@ An optional config.json configuration file has been provided in the extensions f
    | Properties.ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | Properties.linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate. |
    | Properties.timeout | Determines timeout in seconds for all Citrix ADC API calls. |
+   | Properties.removeOldFiles | Delete previous certificate and key files after renewal/replace |
 
 3. **Import the CSV file to create the certificate stores**
 

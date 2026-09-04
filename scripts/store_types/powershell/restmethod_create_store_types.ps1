@@ -106,6 +106,14 @@ New-StoreType "CitrixAdc" @'
       "DependsOn": "",
       "DefaultValue": "3600",
       "Required": false
+    },
+    {
+      "Name": "removeOldFiles",
+      "DisplayName": "Remove Old Files",
+      "Type": "Bool",
+      "DependsOn": "",
+      "DefaultValue": "false",
+      "Required": false
     }
   ],
   "EntryParameters": [
