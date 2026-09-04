@@ -89,10 +89,11 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
             try
             {
                 bool aliasExists = store.AliasExists(jobConfiguration.Alias);
+                string errorMessage = string.Empty;
 
                 if (aliasExists && !jobConfiguration.Overwrite)
                 {
-                    string errorMessage = $"Alias {jobConfiguration.Alias} already exists.  Overwrite must be set to True if you wish to perform ODKG on an existing alias.";
+                    errorMessage = $"Alias {jobConfiguration.Alias} already exists.  Overwrite must be set to True if you wish to perform ODKG on an existing alias.";
                     _logger.LogError(errorMessage);
                     return new JobResult
                     {
@@ -177,7 +178,7 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                 X509Certificate2 cert = submitReenrollment.Invoke(csr);
                 if (cert == null)
                 {
-                    string errorMessage = "Error retrieving certificate for CSR: certificate not returned.";
+                    errorMessage = "Error retrieving certificate for CSR: certificate not returned.";
                     _logger.LogError(errorMessage);
                     return new JobResult
                     {
@@ -211,7 +212,6 @@ namespace Keyfactor.Extensions.Orchestrator.CitricAdc
                     store.SaveConfiguration();
                 }
 
-                string errorMessage = string.Empty;
                 if (hasBindingErrors)
                 {
                     errorMessage += "Certificate was added successfully, but one or more errors occurred binding virtual servers.  Please see the orchestrator log for more details. ";
