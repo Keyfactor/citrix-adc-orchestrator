@@ -33,6 +33,7 @@
 
 The Citrix ADC Orchestrator remotely manages certificate objects on a Citrix ADC device.  Since the ADC supports services including: 
 Load Balancing, Authentication/Authorization/Auditing (AAA), and Gateways, this orchestrator can bind to any of these virtual servers when using unique virtual server names for each service.
+Starting with release 4.0.0, On Device Key Generation (ODKG) is also supported with the following keytypes/sizes supported/tested: RSA 1024, RSA 2048, RSA 3072, RSA 4096, ECDSA P-256, and ECDSA P-384.
 
 
 
@@ -55,9 +56,13 @@ The Citrix ADC user needs permission to perform the following API calls:
 API Endpoint|Methods
 ---|---
 /nitro/v1/config/login|post
-/nitro/v1/config/lbvserver| get
-/nitro/v1/config/sslcertkey| get, update, add, delete
-/nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
+/nitro/v1/config/sslcertkey| get, add, update, delete, link
+/nitro/v1/config/sslcertkey_binding| get
+/nitro/v1/config/sslvserver_sslcertkey_binding| get, add, delete
+/nitro/v1/config/sslcertificatechain| get
+/nitro/v1/config/sslcertreq| add
+/nitro/v1/config/sslrsakey| add
+/nitro/v1/config/sslecdsakey| add
 /nitro/v1/config/systemfile| get, add, delete
 
 Here is a sample policy with Min Permissions:
@@ -85,7 +90,7 @@ To use the Citrix Netscaler Universal Orchestrator extension, you **must** creat
 | Add          | ✅ Checked        |
 | Remove       | ✅ Checked     |
 | Discovery    | 🔲 Unchecked  |
-| Reenrollment | 🔲 Unchecked |
+| Reenrollment | ✅ Checked |
 | Create       | 🔲 Unchecked     |
 
 #### Store Type Creation
@@ -128,7 +133,7 @@ the Keyfactor Command Portal
    | Supports Add | ✅ Checked | Check the box. Indicates that the Store Type supports Management Add |
    | Supports Remove | ✅ Checked | Check the box. Indicates that the Store Type supports Management Remove |
    | Supports Discovery | 🔲 Unchecked |  Indicates that the Store Type supports Discovery |
-   | Supports Reenrollment | 🔲 Unchecked |  Indicates that the Store Type supports Reenrollment |
+   | Supports Reenrollment | ✅ Checked |  Indicates that the Store Type supports Reenrollment |
    | Supports Create | 🔲 Unchecked |  Indicates that the Store Type supports store creation |
    | Needs Server | ✅ Checked | Determines if a target server name is required when creating store |
    | Blueprint Allowed | 🔲 Unchecked | Determines if store type may be included in an Orchestrator blueprint |
@@ -160,8 +165,9 @@ the Keyfactor Command Portal
    | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
    | ServerUsername | Server Username | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. | Secret |  | 🔲 Unchecked |
    | ServerPassword | Server Password | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. | Secret |  | 🔲 Unchecked |
-   | linkToIssuer | Link To Issuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. | Bool | false | 🔲 Unchecked |
+   | linkToIssuer | Link To Issuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate. | Bool | false | 🔲 Unchecked |
    | timeout | Login Timeout in seconds | Determines timeout in seconds for all Citrix ADC API calls. | String | 3600 | 🔲 Unchecked |
+   | removeOldFiles | Remove Old Files | Delete previous certificate and key files after renewal/replace | Bool | false | 🔲 Unchecked |
 
    The Custom Fields tab should look like this:
 
@@ -189,7 +195,7 @@ the Keyfactor Command Portal
 
 
    ###### Link To Issuer
-   Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate.
+   Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate.
 
    ![CitrixAdc Custom Field - linkToIssuer](docsource/images/CitrixAdc-custom-field-linkToIssuer-dialog.png)
    ![CitrixAdc Custom Field - linkToIssuer](docsource/images/CitrixAdc-custom-field-linkToIssuer-validation-options-dialog.png)
@@ -204,14 +210,22 @@ the Keyfactor Command Portal
 
 
 
+   ###### Remove Old Files
+   Delete previous certificate and key files after renewal/replace
+
+   ![CitrixAdc Custom Field - removeOldFiles](docsource/images/CitrixAdc-custom-field-removeOldFiles-dialog.png)
+   ![CitrixAdc Custom Field - removeOldFiles](docsource/images/CitrixAdc-custom-field-removeOldFiles-validation-options-dialog.png)
+
+
+
 
 
    ##### Entry Parameters Tab
 
    | Name | Display Name | Description | Type | Default Value | Entry has a private key | Adding an entry | Removing an entry | Reenrolling an entry |
    | ---- | ------------ | ---- | ------------- | ----------------------- | ---------------- | ----------------- | ------------------- | ----------- |
-   | virtualServerName | Virtual Server Name | When adding a certificate, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
-   | sniCert | SNI Cert | When adding a certificate, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
+   | virtualServerName | Virtual Server Name | When adding a certificate or reenrolling a new alias, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
+   | sniCert | SNI Cert | When adding a certificate or reenrolling a new alias, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values. | String |  | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked | 🔲 Unchecked |
 
    The Entry Parameters tab should look like this:
 
@@ -219,14 +233,14 @@ the Keyfactor Command Portal
 
 
    ##### Virtual Server Name
-   When adding a certificate, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values.
+   When adding a certificate or reenrolling a new alias, this can be a single VServer name or a comma separated list of VServers to bind to  Note: must match the number of Virtual SNI Cert values.
 
    ![CitrixAdc Entry Parameter - virtualServerName](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-virtualServerName.png)
    ![CitrixAdc Entry Parameter - virtualServerName](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-virtualServerName-validation-options.png)
 
 
    ##### SNI Cert
-   When adding a certificate, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values.
+   When adding a certificate or reenrolling a new alias, this can be a single boolean value (true/false) or a comma separated list of boolean values to determine whether the binding should use server name indication.  Note: must match the number of Virtual Server Name values.
 
    ![CitrixAdc Entry Parameter - sniCert](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-sniCert.png)
    ![CitrixAdc Entry Parameter - sniCert](docsource/images/CitrixAdc-entry-parameters-store-type-dialog-sniCert-validation-options.png)
@@ -312,8 +326,9 @@ An optional config.json configuration file has been provided in the extensions f
    | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
    | ServerUsername | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
-   | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+   | linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate. |
    | timeout | Determines timeout in seconds for all Citrix ADC API calls. |
+   | removeOldFiles | Delete previous certificate and key files after renewal/replace |
 
 </details>
 
@@ -342,8 +357,9 @@ An optional config.json configuration file has been provided in the extensions f
    | Orchestrator | Select an approved orchestrator capable of managing `CitrixAdc` certificates. Specifically, one with the `CitrixAdc` capability. |
    | Properties.ServerUsername | The Citrix username (or valid PAM key if the username is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
    | Properties.ServerPassword | The Citrix password (or valid PAM key if the password is stored in a KF Command configured PAM integration) to be used to log into the Citrix device. |
-   | Properties.linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add job) to its issuing CA certificate. |
+   | Properties.linkToIssuer | Determines whether an attempt will be made to link the added certificate (via a Management-Add or Reenrollment job) to its issuing CA certificate. |
    | Properties.timeout | Determines timeout in seconds for all Citrix ADC API calls. |
+   | Properties.removeOldFiles | Delete previous certificate and key files after renewal/replace |
 
 3. **Import the CSV file to create the certificate stores**
 
@@ -380,9 +396,9 @@ Please refer to the **Universal Orchestrator (remote)** usage section ([PAM prov
 
 * As of release 2.2.0, ONLY certificate objects (installed certificates) will be managed by the Citrix ADC Orchestrator Extension.  Prior versions also managed certificate/key file combinations uploaded to the Citrix ADC device but not yet installed.  This functionality has been removed due to issues attempting to match certificate and key files due to inconsistent file naming.
 
-* Direct PFX Binding Inventory: In NetScaler you can directly Bind a Pfx file to a Virtual Server.  Keyfactor cannot inventory these because it does not have access to the password.  The recommended way to Import PFX Files in NetScaler is descibed in this [NetScaler Documentation](https://docs.netscaler.com/en-us/citrix-adc/12-1/ssl/ssl-certificates/export-existing-certs-keys.html#convert-ssl-certificates-for-import-or-export)
-
 * Removing Certs from Store: Certificates that are bound to a server will not be removed.  This was done to limit the possibility of bringing production servers down.  Users are currently required to manually unbind the certificate from the server first and then remove via the Command and this orchestrator extension.
+
+* On-Device Key Generation/ODKG: ODKG always generates a brand new key pair and CSR directly on the Citrix ADC appliance, and the private key never leaves the appliance. If the target alias already exists, Overwrite must be set to True; the new key and certificate then replace the existing key and certificate for that alias in place, so any existing virtual server bindings are preserved automatically. The previous key and certificate files remain on the appliance's filesystem and are not automatically deleted (unless removeOldFiles is set to True). Both RSA and ECC keys are supported; for ECC, only 256 and 384-bit curves (P_256, P_384) are supported by the Citrix ADC appliance for on-device key generation. When adding a new alias via ODKG, the virtualServerName and sniCert Entry Parameters can be used to bind the new certificate the same way they are for Management-Add jobs.  Also, like Management-Add jobs, ODKG does not support modifying bindings when replacing an existing alias.
 
 
 ## License
