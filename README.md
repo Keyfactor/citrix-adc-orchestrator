@@ -56,9 +56,10 @@ The Citrix ADC user needs permission to perform the following API calls:
 API Endpoint|Methods
 ---|---
 /nitro/v1/config/login|post
-/nitro/v1/config/lbvserver| get
-/nitro/v1/config/sslcertkey| get, update, add, delete
-/nitro/v1/config/sslcertkey_service_binding| get, update, add, delete
+/nitro/v1/config/sslcertkey| get, add, update, delete, link
+/nitro/v1/config/sslcertkey_binding| get
+/nitro/v1/config/sslvserver_sslcertkey_binding| get, add, delete
+/nitro/v1/config/sslcertificatechain| get
 /nitro/v1/config/sslcertreq| add
 /nitro/v1/config/sslrsakey| add
 /nitro/v1/config/sslecdsakey| add
